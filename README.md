@@ -13,7 +13,7 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 # limitations
 
-The current version of solver is relatively slow and can't handle large graphs.
+The current version of solver is relatively slow and can't handle large graphs. It is written to work iteratively, and chooses which options to iterate and how, and when to backtrack.
 
 ![homomorphism-18](/images/homomorphism-18.png)
 
