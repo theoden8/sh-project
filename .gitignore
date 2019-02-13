@@ -2,3 +2,4 @@
 .ropeproject
 *.png
 *.pkl
+!/images/*.png
