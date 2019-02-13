@@ -20,8 +20,9 @@ class Solver:
                 for nd in range(len(self.g.nodes()))
         ]
         # self.srcs = [Solver.UNDEFINED for nd in self.g.nodes()]
-        self.srcs = shuffled(list(range(len(self))))
+        # self.srcs = shuffled(list(range(len(self))))
         # self.srcs = list(range(len(self)))
+        self.srcs = sorted(list(self.g.nodes()), key=lambda nd: self.g.degree()[nd], reverse=True)
         self.soln_inds = [Solver.UNDEFINED for nd in self.g.nodes()]
         self.soln = [Solver.UNDEFINED for nd in self.g.nodes()]
         self.i = 0
@@ -91,20 +92,20 @@ def is_homomorphism(g, h):
             # print(s)
             if s.action == Solver.FORWARD:
                 # can choose next option here
-                # s.srcs[s.i] = choice([j for j in range(len(s.soln)) if j not in s.srcs[:s.i]])
-                # s.srcs[s.i] = s.i
+                # options = [j for j in range(len(s.soln)) if j not in s.srcs[:s.i]]
+                # options = sorted(options, key=lambda x: s.g.degree()[x])
+                # s.srcs[s.i] = options[-1]
+
+                # we just used our last option
                 if s.is_final_option():
-                    # print('used out current cell', s.soln_ind())
                     s.action = Solver.BACKTRACK
                     s.reset_soln_cell()
                     s.i -= 1
             assert s.i >= -1
             # if s.action == Solver.BACKTRACK and s.soln_inds[ind] != Solver.UNDEFINED:
                 # update constraint?
-            #     print('stmt 1')
-            #     s.reset_soln_cell()
-            cr = s.soln_ind() + 1
-            while not s.is_final_option(cr) and s.is_valid_option(cr):
+            new_soln_ind = s.soln_ind() + 1
+            while not s.is_final_option(new_soln_ind) and s.is_valid_option(new_soln_ind):
                 # check constraint directly here
                 approved = True
                 ii = 0 if s.i < 0 else s.i
@@ -112,7 +113,7 @@ def is_homomorphism(g, h):
                     # take all previous indices
                     for j in range(ii):
                         gu, gv = s.srcs[ii], s.srcs[j]
-                        hu, hv = s.possibles[gu][cr], s.soln[gv]
+                        hu, hv = s.possibles[gu][new_soln_ind], s.soln[gv]
                         edge_g, edge_h = (gu, gv), (hu, hv)
                         print('test', edge_g, edge_h)
                         if edge_g in s.g.edges() and edge_h not in s.h.edges():
@@ -121,11 +122,11 @@ def is_homomorphism(g, h):
                             break
                 if approved:
                     break
-                cr += 1
+                new_soln_ind += 1
             if not s.is_final_option():
                 s.action = Solver.FORWARD
                 # s.srcs[ii] = s.i
-                s.set_soln_ind(cr)
+                s.set_soln_ind(new_soln_ind)
                 s.i += 1
             else:
                 s.action = Solver.BACKTRACK
