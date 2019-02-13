@@ -18,13 +18,6 @@ def shifted(lst, steps=1):
     return lst
 
 
-def save_figure(fig, filename):
-    if os.path.exists(filename):
-        os.remove(filename)
-    fig.savefig(filename)
-
-
-
 def plot_graphs(Gs, ssizes, filename, **kwargs):
     layout = kwargs['layout'] if 'layout' in kwargs else nx.kamada_kawai_layout
     colors = kwargs['colors'] if 'colors' in kwargs else ['r']
@@ -63,13 +56,18 @@ def plot_graphs(Gs, ssizes, filename, **kwargs):
                                ax=ax,)
         ax.set_title(title, fontsize=title_font_size)
         ax.set_axis_off()
-    save_figure(plt, filename)
+    if os.path.exists(filename):
+        os.remove(filename)
+    fig.savefig(filename)
     plt.clf()
     plt.cla()
 
 
 def plot_graph(G, filename, **kwargs):
-    plot_graphs([(G, str(G))], (1, 1), filename, **kwargs)
+    plot_graphs(Gs=[(G, str(G))],
+                ssizes=(1, 1),
+                filename=filename,
+                **kwargs)
 
 
 def make_random_graph():
@@ -94,34 +92,37 @@ def make_random_graph():
 
 
 def make_random_isomorphism(G):
-    pmt = shuffled(list(G.nodes()))
-    edges = [(pmt[a], pmt[b]) for (a, b) in list(G.edges())]
+    phi = shuffled(list(G.nodes()))
+    edges = [(phi[a], phi[b]) for (a, b) in list(G.edges())]
     H = nx.Graph(edges)
     assert nx.is_isomorphic(G, H)
-    return H
+    return H, phi
 
 
 def make_random_homomorphism(G):
-    H = G
+    H = nx.Graph(G)
     r = randint(1, 5)
     phi = list(range(len(G.nodes())))
-    # for i in range(r):
-    #     edge = choice(list(H.edges()))
-    #     H = nx.contracted_edge(H, edge, self_loops=False)
-    #     phi[edge[1]] = edge[0]
-    for i in range(r):
+    for i in range(randint(1, r)):
         u = choice(list(G.nodes()))
         v = [v for v in list(G.nodes()) if v != u and (u, v) not in list(G.edges())]
         v = choice(v)
-        # print(u, v)
+        H.add_edge(v, u)
+        edge = (v, u)
+        H = nx.contracted_edge(H, edge, self_loops=False)
+        phi[u] = v
+    for i in range(randint(1, r)):
+        u = choice(list(G.nodes()))
+        v = [v for v in list(G.nodes()) if v != u and (u, v) not in list(G.edges())]
+        v = choice(v)
         H.add_edge(u, v)
-    return (H, phi)
+    return H, phi
 
 
-def plot_homomorphism(G, H, phi):
-    plot_graphs([
-                    (G, '$ Dom(\phi) $' + str(phi)),
-                    (H, '$ Im(\phi) $'),
-                ], (1, 2), 'endomorphism.png', colors=['r', 'b'],
+def plot_homomorphism(G, H, phi, filename):
+    plot_graphs(Gs=[(G, '$ Dom(\phi) $' + str(phi)), (H, '$ Im(\phi) $')],
+                ssizes=(1, 2),
+                filename=filename,
+                colors=['r', 'b'],
                 title_font_size=40,
                 label_font_size=20)

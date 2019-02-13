@@ -1,146 +1,143 @@
 #!/usr/bin/env python3
 
 
-import os
-import math
-from more_itertools import random_permutation
-
-import matplotlib.pyplot as plt
-import numpy as np
-
-import networkx as nx
-import networkx.generators.classic
-import networkx.generators.community
-import networkx.generators.random_graphs
-
-from random import random
 from random import randint
+from random import choice
 
 
-def save_figure(fig, filename):
-    if os.path.exists(filename):
-        os.remove(filename)
-    fig.savefig(filename)
+from graph_utils import *
 
 
+class Solver:
+    UNDEFINED = -1
+    FORWARD, BACKTRACK = range(2)
+    def __init__(self, g, h):
+        self.g = g
+        self.h = h
+        self.possibles = [
+            shifted(list(h.nodes()), nd)
+            # sorted(list(self.h.nodes()))
+                for nd in range(len(self.g.nodes()))
+        ]
+        # self.srcs = [Solver.UNDEFINED for nd in self.g.nodes()]
+        self.srcs = shuffled(list(range(len(self))))
+        # self.srcs = list(range(len(self)))
+        self.soln_inds = [Solver.UNDEFINED for nd in self.g.nodes()]
+        self.soln = [Solver.UNDEFINED for nd in self.g.nodes()]
+        self.i = 0
+        self.action = Solver.FORWARD
 
-def plot_graphs(Gs, ssizes, filename, layout=nx.kamada_kawai_layout):
-    nr, nc = ssizes
-    totalsize = float(24. / math.sqrt(nc * nr))
-    fig = plt.figure(1, figsize=(int(totalsize * nc), int(totalsize * nr)))
-    plt.clf()
-    splts = fig.subplots(nrows=nr, ncols=nc)
-    if nr == 1:
-        splts = [splts]
-    if nc == 1:
-        splts = [splts]
-    for i, j in [[y, x] for y in range(nr) for x in range(nc)]:
-        G, title = Gs[i * nc + j]
-        pos = layout(G, dim=2)
-        ax = splts[i][j]
-        plt.sca(ax)
-        if len(G) < 15:
-            nx.draw_networkx_labels(G, pos,
-                                    labels={i : str(i) for i in list(G.nodes)},
-                                    font_size=25,
-                                    font_family='arial-black',
-                                    font_weight='bold',
-                                    font_color='w',
-                                    alpha=1.,
-                                    ax=ax)
-        color = 'r'
-        if nc == 2 and nr == 1 and j == 1:
-            color = 'b'
-        nx.draw_networkx_nodes(G, pos,
-                               node_color=color,
-                               node_size=1800,
-                               ax=ax)
-        nx.draw_networkx_edges(G, pos,
-                               width=[0.3 for (u, v, d) in G.edges(data=True)],
-                               ax=ax,)
-        ax.set_title(title, fontsize=40)
-        ax.set_axis_off()
-    save_figure(plt, filename)
-    plt.clf()
-    plt.cla()
+    def reset_soln_cell(self):
+        i = 0 if self.i == -1 else self.i
+        ind = self.srcs[i]
+        # self.srcs[i] = Solver.UNDEFINED
+        self.soln_inds[ind] = Solver.UNDEFINED
+        self.soln[ind] = Solver.UNDEFINED
 
+    def set_soln_ind(self, sln_ind):
+        i = 0 if self.i == -1 else self.i
+        ind = self.srcs[i]
+        self.soln_inds[ind] = sln_ind
+        self.soln[ind] = self.possibles[ind][self.soln_inds[ind]]
 
-def plot_graph(G, filename, layout=nx.kamada_kawai_layout):
-    plot_graphs([(G, str(G))], [1, 1], filename, layout)
+    def set_next_soln(self):
+        self.set_soln_ind(self.soln_ind() + 1)
 
+    def is_valid_soln(self):
+        dbg = (self.soln == [0, 0, 0, 1, 3, 5, 6])
+        assert self.i == len(self)
+        gnodes = list(self.g.nodes())
+        for e in list(self.g.edges()):
+            u, v = e
+            u, v = gnodes.index(u), gnodes.index(v)
+            hu, hv = (self.soln[u], self.soln[v])
+            if (hu, hv) not in self.h.edges():
+                return False
+        return True
 
+    def is_final_option(self, val=None):
+        i = 0 if self.i < 0 else self.i
+        ind = self.srcs[i]
+        if val is None:
+            val = self.soln_ind()
+        return val == len(self.possibles[ind]) - 1
 
-if __name__ == "__main__":
-    plt.switch_backend('agg')
-    # plot_graphs([
-    #     (nx.tutte_graph(), 'Tutte Graph'),
-    #     (nx.barbell_graph(randint(5, 10), randint(5, 10)), 'Barbell Graph'),
-    #     (nx.turan_graph(20, 5), 'Turan Graph'),
-    #     (nx.lollipop_graph(20, 10), 'Lollipop Graph'),
+    def is_valid_option(self, val=None):
+        i = 0 if self.i < 0 else self.i
+        ind = self.srcs[i]
+        if val is None:
+            val = self.soln_ind()
+        return val in range(len(self.possibles[ind]))
 
-    #     (nx.circular_ladder_graph(20), 'Circular Ladder Graph'),
-    #     (nx.caveman_graph(5, 10), 'Caveman Graph'),
-    #     (nx.desargues_graph(), 'Desargues Graph'),
-    #     (nx.barabasi_albert_graph(20, 3), 'Barabasi Albert Graph'),
+    def soln_ind(self):
+        i = 0 if self.i < 0 else self.i
+        ind = self.srcs[i]
+        return self.soln_inds[ind]
 
-    #     (nx.newman_watts_strogatz_graph(40, 5, .1), 'Newman-Watts-Strogatz Graph'),
-    #     (nx.erdos_renyi_graph(40, .1), 'Erdos Renyi Graph'),
-    #     (nx.karate_club_graph(), 'Karate Club Graph'),
-    #     (nx.hoffman_singleton_graph(), 'Hoffman-Singleton Graph')
-    # ], [3, 4], 'families.png')
-    # plot_graphs([
-    #     (nx.dorogovtsev_goltsev_mendes_graph(i), 'DGM('+str(i)+') Graph')
-    #         for i in range(2, 7+1)
-    # ], [2, 3], 'dorogovtsev_goltsev_mendes.png')
-    # plot_graphs([
-    #     (nx.mycielski_graph(i), 'Mycielski('+str(i)+') Graph')
-    #         for i in range(1, 10+1)
-    # ], [3, 3], 'mycielski.png', nx.spring_layout)
-    # plot_graphs([
-    #     (nx.margulis_gabber_galil_graph(i), 'MGG('+str(i)+') Graph')
-    #         for i in range(1, 13+1)
-    # ], [3, 4], 'margulis_gabber_galil.png', nx.spring_layout)
-    # n = randint(100, 100)
-    # g = nx.random_graphs.binomial_graph(n, .2)
-    # plot_graph(g, 'random_graph.png', nx.spring_layout)
-    pass
+    def __str__(self):
+        s = 'backtrack' if self.action else 'forward'
+        s += ' ' + str(self.i) + ' soln:' + str(self.soln_inds)
+        return s
+
+    def __len__(self):
+        return len(self.g.nodes())
 
 
-def is_homomorphism(g, h, phi):
-    for e in list(g.edges):
-        if not (phi[e[0]], phi[e[1]]) in list(h.edges):
-            return None
-    return phi
-
-
-
-def is_homomorphic_recurse(g, h, phi, i):
-    if i == len(list(g.nodes)):
-        print("phi", phi)
-        return is_homomorphism(g, h, phi)
-    for k in list(h.nodes):
-        phi[i] = k
-        r = is_homomorphic_recurse(g, h, phi, i + 1)
-        if r is not None:
-            return r
-    return None
-
-
-def is_homomorphic(g, h):
-    return is_homomorphic_recurse(g, h, [0 for nd in list(g.nodes)], -1)
-
-
-def make_isomorphic(g):
-    pmtnodes = random_permutation(list(g.nodes))
-    edges = [(pmtnodes[a], pmtnodes[b]) for (a, b) in list(g.edges)]
-    return nx.Graph(edges)
-
-
-if __name__ == "__main__":
-    # g = nx.random_graphs.binomial_graph(8, .4)
-    g = nx.desargues_graph()
-    phi = is_homomorphic(g, g)
-    plot_graphs([
-        (g, '$ Dom(\phi) $'),
-        (g.subgraph(set(list(phi))), '$ Im(\phi) $')
-    ], [1, 2], 'current_random.png')
+def is_homomorphism(g, h):
+    s = Solver(g, h)
+    print(s.possibles)
+    while True:
+        while s.i in range(len(s)):
+            # print(s)
+            if s.action == Solver.FORWARD:
+                # can choose next option here
+                # s.srcs[s.i] = choice([j for j in range(len(s.soln)) if j not in s.srcs[:s.i]])
+                # s.srcs[s.i] = s.i
+                if s.is_final_option():
+                    # print('used out current cell', s.soln_ind())
+                    s.action = Solver.BACKTRACK
+                    s.reset_soln_cell()
+                    s.i -= 1
+            assert s.i >= -1
+            # if s.action == Solver.BACKTRACK and s.soln_inds[ind] != Solver.UNDEFINED:
+                # update constraint?
+            #     print('stmt 1')
+            #     s.reset_soln_cell()
+            cr = s.soln_ind() + 1
+            while not s.is_final_option(cr) and s.is_valid_option(cr):
+                approved = True
+                ii = 0 if s.i < 0 else s.i
+                if ii > 0:
+                    # take all previous indices
+                    for j in range(ii):
+                        # if maps to the same node
+                        gu, gv = s.srcs[ii], s.srcs[j]
+                        hu, hv = s.possibles[gu][cr], s.soln[gv]
+                        edge_g, edge_h = (gu, gv), (hu, hv)
+                        print('test', edge_g, edge_h)
+                        if edge_g in s.g.edges() and edge_h not in s.h.edges():
+                            approved = False
+                            print('not ok')
+                            break
+                if approved:
+                    break
+                cr += 1
+            if not s.is_final_option():
+                s.action = Solver.FORWARD
+                # s.srcs[ii] = s.i
+                s.set_soln_ind(cr)
+                s.i += 1
+            else:
+                s.action = Solver.BACKTRACK
+                s.reset_soln_cell()
+                s.i -= 1
+            # print(s)
+        if s.i < 0:
+            break
+        if s.is_valid_soln():
+            yield s.soln
+        # deal with result
+        s.i -= 1
+        s.action = Solver.BACKTRACK
+    if s.i != -1:
+        yield s.soln

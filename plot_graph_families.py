@@ -14,7 +14,7 @@ if __name__ == "__main__":
     opts = {
         'node_size': 400,
         'label_font_size': 8,
-        'title_font_size': 40
+        'title_font_size': 35
     }
     plot_graphs([
         (nx.tutte_graph(), 'Tutte Graph'),
