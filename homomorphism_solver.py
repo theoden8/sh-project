@@ -15,7 +15,8 @@ class Solver:
         self.g = g
         self.h = h
         self.possibles = [
-            shifted(list(h.nodes()), nd)
+            sorted(list(self.h.nodes()), key=lambda x: abs(self.g.degree()[nd] - self.h.degree()[x]))
+            # shifted(list(h.nodes()), nd)
             # sorted(list(self.h.nodes()))
                 for nd in range(len(self.g.nodes()))
         ]
@@ -103,8 +104,9 @@ def is_homomorphism(g, h):
                     s.reset_soln_cell()
                     s.i -= 1
             assert s.i >= -1
-            # if s.action == Solver.BACKTRACK and s.soln_inds[ind] != Solver.UNDEFINED:
-                # update constraint?
+            if s.action == Solver.BACKTRACK and s.soln_ind() != Solver.UNDEFINED:
+                # shuffle possibles?
+                pass
             new_soln_ind = s.soln_ind() + 1
             while not s.is_final_option(new_soln_ind) and s.is_valid_option(new_soln_ind):
                 # check constraint directly here
