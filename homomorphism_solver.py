@@ -105,12 +105,12 @@ def is_homomorphism(g, h):
             #     s.reset_soln_cell()
             cr = s.soln_ind() + 1
             while not s.is_final_option(cr) and s.is_valid_option(cr):
+                # check constraint directly here
                 approved = True
                 ii = 0 if s.i < 0 else s.i
                 if ii > 0:
                     # take all previous indices
                     for j in range(ii):
-                        # if maps to the same node
                         gu, gv = s.srcs[ii], s.srcs[j]
                         hu, hv = s.possibles[gu][cr], s.soln[gv]
                         edge_g, edge_h = (gu, gv), (hu, hv)
