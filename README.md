@@ -11,6 +11,14 @@ This repository contains files related to the SH project called "Graph Homomorph
 * plot_graph_families.py - generates pictures of some graph families. Exists here for the purposes of testing graph_utils.
 * plot_homomorphism.py - generates pictures of some graph homomorphisms, with full logging possible on how the homomorphism was generated/found, etc. Thus it serves as an interactive debugging facility.
 
+# limitations
+
+The current version of solver is relatively slow and can't handle large graphs.
+
+![homomorphism-18](/images/homomorphism-18.png)
+
+Some heuristics are being sought to improve its basic performance.
+
 # prerequisites
 
 ```bash

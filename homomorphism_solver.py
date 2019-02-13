@@ -89,7 +89,8 @@ def is_homomorphism(g, h):
     print(s.possibles)
     while True:
         while s.i in range(len(s)):
-            # print(s)
+            if s.i < len(s) / 3:
+                print(s)
             if s.action == Solver.FORWARD:
                 # can choose next option here
                 # options = [j for j in range(len(s.soln)) if j not in s.srcs[:s.i]]
@@ -115,10 +116,10 @@ def is_homomorphism(g, h):
                         gu, gv = s.srcs[ii], s.srcs[j]
                         hu, hv = s.possibles[gu][new_soln_ind], s.soln[gv]
                         edge_g, edge_h = (gu, gv), (hu, hv)
-                        print('test', edge_g, edge_h)
+                        # print('test', edge_g, edge_h)
                         if edge_g in s.g.edges() and edge_h not in s.h.edges():
                             approved = False
-                            print('not ok')
+                            # print('not ok')
                             break
                 if approved:
                     break
