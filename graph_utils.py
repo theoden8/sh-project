@@ -101,7 +101,7 @@ def make_random_isomorphism(G):
 
 def make_random_homomorphism(G):
     H = nx.Graph(G)
-    r = randint(1, 5)
+    r = randint(1, int(max(5, len(list(G.nodes())) / 5)))
     phi = list(range(len(G.nodes())))
     for i in range(randint(1, r)):
         u = choice(list(G.nodes()))
@@ -124,5 +124,5 @@ def plot_homomorphism(G, H, phi, filename):
                 ssizes=(1, 2),
                 filename=filename,
                 colors=['r', 'b'],
-                title_font_size=40,
+                title_font_size=20,
                 label_font_size=20)

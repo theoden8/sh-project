@@ -29,6 +29,8 @@ class Solver:
         self.i = 0
         self.action = Solver.FORWARD
         self.no_solns = 0
+        self.error_g = [0 for nd in self.g.nodes()]
+        self.pruned_h = [0 for nd in self.h.nodes()]
 
     def is_valid_solution(self):
         dbg = (self.soln == [0, 0, 0, 1, 3, 5, 6])
@@ -50,8 +52,9 @@ class Solver:
             new_rating += 100 * len([nd for nd in list(self.g.neighbors(ind)) if nd in self.srcs[:self.i]])
             new_rating += 50 * len([nd for nd in list(self.g.neighbors(ind)) if nd not in self.srcs[:self.i]])
             if new_rating > rating:
-                option = ind
-                rating = new_rating
+                option, rating = ind, new_rating
+            elif new_rating == rating and self.error_g[ind] > self.error_g[option]:
+                option, rating = ind, new_rating
         if option != -1:
             return option
         return self.srcs[self.i]
@@ -74,12 +77,14 @@ class Solver:
         i = 0 if self.i < 0 else self.i
         ind = self.srcs[i]
         def rating_func(h_ind):
+            hnd = self.possibles[ind][h_ind]
             map_image = [self.soln[idx] for idx in self.srcs[:self.i]]
-            rating = 0
-            rating += 100 * len([nd for nd in list(self.h.neighbors(h_ind)) if nd in map_image])
-            rating += 10 * len([nd for nd in list(self.h.neighbors(h_ind)) if nd not in map_image])
+            rating = 0.
+            rating += 10000 * len([nb for nb in list(self.h.neighbors(hnd)) if nb in map_image])
+            rating += 1000 * len([nb for nb in list(self.h.neighbors(hnd)) if nb not in map_image])
+            rating -= self.pruned_h[h_ind]
             return rating
-        self.possibles[ind] = sorted(self.possibles[ind], key=rating_func, reverse=True)
+        self.possibles[ind] = [self.possibles[ind][x] for x in sorted(range(len(self.possibles[ind])), key=rating_func, reverse=True)]
 
     def find_possible_map(self):
         i = 0 if self.i < 0 else self.i
@@ -96,6 +101,7 @@ class Solver:
                     hv = self.soln[gv]
                     if (gu, gv) in self.g.edges() and (hu, hv) not in self.h.edges():
                         approved = False
+                        self.pruned_h[mapto] += 1
                         break
             if approved:
                 break
@@ -113,6 +119,7 @@ class Solver:
     def set_rollback(self):
         i = 0 if self.i == -1 else self.i
         ind = self.srcs[i]
+        self.error_g[ind] += 1
         self.action = Solver.BACKTRACK
         # self.srcs[i] = Solver.UNDEFINED
         self.soln_inds[ind] = Solver.UNDEFINED
@@ -128,6 +135,7 @@ class Solver:
         if function is None:
             def func(soln):
                 self.no_solns += 1
+                return True
             function = func
         while True:
             while self.i in range(len(self)):
@@ -150,12 +158,13 @@ class Solver:
             if self.i < 0:
                 break
             if self.is_valid_solution():
-                function(self.soln)
+                if not function(self.soln):
+                    return
             # deal with result
             self.i -= 1
             self.action = Solver.BACKTRACK
-        if self.i != -1:
-            function(self.soln)
+        if self.i != -1 and not function(self.soln):
+            return
 
     def __str__(self):
         s = 'backtrack' if self.action else 'forward'
@@ -170,3 +179,13 @@ def find_homomorphisms(g, h):
     s = Solver(g, h)
     s.find_solutions()
     return s.no_solns
+
+def is_homomorphic(g, h):
+    s = Solver(g, h)
+    def func(soln):
+        s.no_solns = 1
+        return False
+    s.find_solutions(function=func)
+    if s.no_solns == 1:
+        return s.soln
+    return None
