@@ -6,8 +6,9 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 # files
 
+* quick_notes.pdf - updated version of notes from papers
 * graph_utils.py - simple graph utilities, such as generating, drawing etc
-* homomorphism_solver.py - moderately good homomorphism solver
+* homomorphism_solver.py - mediocre homomorphism solver
 * plot_graph_families.py - generates pictures of some graph families. Exists here for the purposes of testing graph_utils.
 * plot_homomorphism.py - generates pictures of some graph homomorphisms, with full logging possible on how the homomorphism was generated/found, etc. Thus it serves as an interactive debugging facility.
 
