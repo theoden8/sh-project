@@ -1,0 +1,87 @@
+#!/bin/bash
+
+add_nodes_script() {
+    file=$1; shift
+    var=$1; shift
+    echo "
+import json
+with open('$file', 'r') as f:
+    j = json.load(f)
+    nodes = [x + 1 for x in j['nodes']]
+    for nd in nodes:
+        print('$var := DigraphAddVertex($var, %s);' % nd)
+    " # | tee /dev/stderr
+}
+add_edges_script() {
+    file=$1; shift
+    var=$1; shift
+    echo "
+import json
+with open('$file', 'r') as f:
+    j = json.load(f)
+    edges = [[a + 1, b + 1] for a, b in j['edges']]
+    for e in edges:
+        print('$var := DigraphAddEdge($var, [%s, %s]);' % (e[0], e[1]))
+        print('$var := DigraphAddEdge($var, [%s, %s]);' % (e[1], e[0]))
+    " # | tee /dev/stderr
+}
+
+[ -f "./gap_config.sh" ] && {
+    . ./gap_config.sh
+}
+
+[ -z "$GAP" ] && {
+    >&2 echo "error: please, make sure GAP variable is set"
+    >&2 echo "(you can create gap_config.sh file, it will then be automatically sourced)"
+    exit 1
+}
+[ -f "$GAP" ] || {
+    >&2 echo "error: seems like [GAP=$GAP] does not point to a file"
+    exit 1
+}
+
+gfile=$1;shift
+hfile=$1;shift
+
+[ -z "$gfile" ] && {
+    >&2 echo "error: please, specify file for G"
+    exit 1
+}
+
+[ -z "$hfile" ] && {
+    >&2 echo "error: please, specify file for H"
+    exit 1
+}
+
+[ -f "$gfile" ] || {
+    >&2 echo "error: couldn't find a valid file for G"
+    exit 1
+}
+
+[ -f "$hfile" ] || {
+    >&2 echo "error: couldn't find a valid file for H"
+    exit 1
+}
+
+gap_script="
+LoadPackage(\"Digraphs\");
+
+g := Digraph([]);
+$(env python3 -c "$(add_nodes_script "$gfile" g)")
+$(env python3 -c "$(add_edges_script "$gfile" g)")
+
+h := Digraph([]);
+$(env python3 -c "$(add_nodes_script "$hfile" h)")
+$(env python3 -c "$(add_edges_script "$hfile" h)")
+
+# establish somehow if two graphs are homomorphic to each other
+Print(\"RESULT $gfile\t$hfile\t\", DigraphHomomorphism(g, h), \"\\n\");
+"
+# echo "$gap_script" | pygmentize -l shell
+start=0
+$GAP --quitonbreak <<< "${gap_script}" | while IFS= read -r line; do
+    [ -z "$(echo "$line" | grep 'RESULT')" ] || start=1
+    [ $start -eq 1 ] && {
+        echo "$line"
+    }
+done | tr '\n' ' ' | sed 's/.*RESULT //'

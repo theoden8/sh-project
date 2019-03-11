@@ -1,0 +1,27 @@
+#!/bin/bash
+
+gfile=$1; shift
+
+[ -z "$gfile" ] && {
+    >&2 echo "error: please, specify file for G"
+    exit 1
+}
+
+[ -f "$gfile" ] || {
+    >&2 echo "error: please, make sure file specified for G is valid"
+    exit 1
+}
+
+! [ -d "./small_graphs" ] && ./generate_small_graphs.py
+
+for gsize in {2..7}; do
+    to_break=0
+    for hfile in ./small_graphs/graph_${gsize}*; do
+        info=$(./gap_homomorphism_finder "$gfile" "$hfile")
+        echo "$info"
+        [ -z "$(echo "$info" | grep -v fail)" ] || {
+            to_break=1
+        }
+    done
+    [ $to_break -eq 1 ] && break
+done
