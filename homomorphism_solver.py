@@ -139,8 +139,8 @@ class Solver:
             function = func
         while True:
             while self.i in range(len(self)):
-                if self.i < 3:
-                    print(self)
+                # if self.i < 3:
+                    # print(self)
                 if self.action == Solver.FORWARD:
                     self.srcs[self.i] = self.choose_best_node()
                     if self.is_last_option():

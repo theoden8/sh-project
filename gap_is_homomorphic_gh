@@ -1,0 +1,8 @@
+#!/bin/bash
+
+line=$(./gap_homomorphism_finder $@)
+[ -z "$(echo "$line" | grep fail)" ] && {
+    echo YES
+} || {
+    echo NO
+}
