@@ -3,3 +3,7 @@
 *.png
 *.pkl
 !/images/*.png
+gap_config.sh
+graphs
+small_graphs
+unused

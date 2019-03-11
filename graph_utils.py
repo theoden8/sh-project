@@ -70,25 +70,30 @@ def plot_graph(G, filename, **kwargs):
                 **kwargs)
 
 
-def make_random_graph():
-    graphs = [
-        (nx.tutte_graph(), 'Tutte Graph'),
-        (nx.barbell_graph(randint(5, 10), randint(5, 10)), 'Barbell Graph'),
-        (nx.turan_graph(20, 5), 'Turan Graph'),
-        (nx.lollipop_graph(20, 10), 'Lollipop Graph'),
+# def make_random_graph():
+#     graphs = [
+#         (nx.tutte_graph(), 'Tutte Graph'),
+#         (nx.barbell_graph(randint(5, 10), randint(5, 10)), 'Barbell Graph'),
+#         (nx.turan_graph(20, 5), 'Turan Graph'),
+#         (nx.lollipop_graph(20, 10), 'Lollipop Graph'),
 
-        (nx.circular_ladder_graph(20), 'Circular Ladder Graph'),
-        (nx.caveman_graph(5, 10), 'Caveman Graph'),
-        (nx.desargues_graph(), 'Desargues Graph'),
-        (nx.barabasi_albert_graph(20, 3), 'Barabasi Albert Graph'),
+#         (nx.circular_ladder_graph(20), 'Circular Ladder Graph'),
+#         (nx.caveman_graph(5, 10), 'Caveman Graph'),
+#         (nx.desargues_graph(), 'Desargues Graph'),
+#         (nx.barabasi_albert_graph(20, 3), 'Barabasi Albert Graph'),
 
-        (nx.newman_watts_strogatz_graph(40, 5, .1), 'Newman-Watts-Strogatz Graph'),
-        (nx.erdos_renyi_graph(40, .1), 'Erdos Renyi Graph'),
-        (nx.karate_club_graph(), 'Karate Club Graph'),
-        (nx.hoffman_singleton_graph(), 'Hoffman-Singleton Graph')
-    ]
-    # return choice(graphs)
-    return nx.cycle_graph(10), 'cycle (10)'
+#         (nx.newman_watts_strogatz_graph(40, 5, .1), 'Newman-Watts-Strogatz Graph'),
+#         (nx.erdos_renyi_graph(40, .1), 'Erdos Renyi Graph'),
+#         (nx.karate_club_graph(), 'Karate Club Graph'),
+#         (nx.hoffman_singleton_graph(), 'Hoffman-Singleton Graph')
+#     ]
+#     # return choice(graphs)
+#     return nx.cycle_graph(10), 'cycle (10)'
+
+
+def make_random_graph(n):
+    p = (1. / n) * math.log(n)
+    return nx.binomial_graph(n, p)
 
 
 def make_random_isomorphism(G):
@@ -126,3 +131,18 @@ def plot_homomorphism(G, H, phi, filename):
                 colors=['r', 'b'],
                 title_font_size=20,
                 label_font_size=20)
+
+def serialize_graph(g):
+    return {
+        'nodes': list(g.nodes()),
+        'edges': list(g.edges())
+    }
+
+def deserialize_graph(s):
+    s = json.loads(s)
+    nodes = s['nodes']
+    edges = s['edges']
+    g = nx.Graph()
+    for e in edges:
+        g.add_edge(e[0], e[1])
+    return g
