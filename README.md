@@ -7,10 +7,26 @@ This repository contains files related to the SH project called "Graph Homomorph
 # files
 
 * quick_notes.pdf - updated version of notes from papers
+
 * graph_utils.py - simple graph utilities, such as generating, drawing etc
+
 * homomorphism_solver.py - mediocre homomorphism solver
-* plot_graph_families.py - generates pictures of some graph families. Exists here for the purposes of testing graph_utils.
-* plot_homomorphism.py - generates pictures of some graph homomorphisms, with full logging possible on how the homomorphism was generated/found, etc. Thus it serves as an interactive debugging facility.
+
+* plot_graph_families.py - generates pictures of some graph families. Exists here for the purposes of testing graph_utils
+
+* plot_homomorphism.py - generates pictures of some graph homomorphisms, with full logging possible on how the homomorphism was generated/found, etc. Thus it serves as an interactive debugging facility
+
+  ---
+
+* generate_small_graphs.py: a script to download Brendan McKay's dataset of graphs and write them into **small_graphs/** folder in a more convenient format (JSON). Uses **nauty** to decode g6 format of the original dataset
+
+* graph_dataset_utils.py: a helper file for *generate_small_graphs.py*
+
+* generate_connected_graph.py: a python program that generates a connected graph of given size and puts it into **graphs/** folder
+
+* gap_homomorphism_finder: uses GAP graph homomorphism finder to find a homomorphism between two graphs
+
+* gap_homomorphism_core_finder: uses GAP and a dataset of small graphs to find a potential core by trying to find a homomorphism from a given graph
 
 # limitations
 
