@@ -36,6 +36,8 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 * gap_homomorphism_core_finder: uses GAP and a dataset of small graphs to find a potential core by trying to find a homomorphism from a given graph
 
+* gap_is_homomorphic_gh: uses GAP solver to print "YES" or "NO" if two graphs are homomorphic
+
   ---
 
 * quick_notes.pdf - updated version of notes from papers
