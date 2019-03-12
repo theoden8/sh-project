@@ -25,6 +25,7 @@ def plot_graphs(Gs, ssizes, filename, **kwargs):
     title_font_size = kwargs['title_font_size'] if 'title_font_size' in kwargs else 40
     label_font_size = kwargs['label_font_size'] if 'label_font_size' in kwargs else 20
     node_size = kwargs['node_size'] if 'node_size' in kwargs else 1800
+    label_rename_func = kwargs['label_func'] if 'label_func' in kwargs else str
     nr, nc = ssizes
     totalsize = float(24. / math.sqrt(nc * nr))
     fig = plt.figure(1, figsize=(int(totalsize * nc), int(totalsize * nr)))
@@ -41,7 +42,7 @@ def plot_graphs(Gs, ssizes, filename, **kwargs):
         plt.sca(ax)
         if len(G) < 100:
             nx.draw_networkx_labels(G, pos,
-                                    labels={i : str(i) for i in list(G.nodes)},
+                                    labels={i : label_rename_func(i) for i in list(G.nodes)},
                                     font_size=label_font_size,
                                     font_family='arial-black',
                                     font_weight='bold',
@@ -54,6 +55,8 @@ def plot_graphs(Gs, ssizes, filename, **kwargs):
                                ax=ax)
         nx.draw_networkx_edges(G, pos,
                                width=[0.3 for (u, v, d) in G.edges(data=True)],
+                               arrowstyle='-|>',
+                               arrowsize=12,
                                ax=ax,)
         ax.set_title(title, fontsize=title_font_size)
         ax.set_axis_off()
@@ -144,6 +147,17 @@ def deserialize_graph(s):
     nodes = s['nodes']
     edges = s['edges']
     g = nx.Graph()
+    for e in edges:
+        g.add_edge(e[0], e[1])
+    return g
+
+def deserialize_digraph(s):
+    s = json.loads(s)
+    nodes = s['nodes']
+    edges = s['edges']
+    g = nx.DiGraph()
+    for nd in nodes:
+        g.add_node(nd)
     for e in edges:
         g.add_edge(e[0], e[1])
     return g

@@ -40,7 +40,9 @@ This repository contains files related to the SH project called "Graph Homomorph
 
   ---
 
-* quick_notes.pdf - updated version of notes from papers
+* make_supergraph.py: constructs a partial order graph out of given files
+
+* quick_notes.pdf: updated version of notes from papers
 
 # limitations
 

@@ -4,6 +4,7 @@
 *.pkl
 *.so
 *.prof
+*.json
 !/images/*.png
 gap_config.sh
 graphs
