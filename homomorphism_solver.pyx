@@ -1,5 +1,7 @@
 #!python
 #cython: language_level=3
+#cython: profile=True
+#cython: linetrace=True
 #distutils: language=c++
 
 
@@ -58,7 +60,7 @@ cdef class Solver:
             self.adjacency_h[e[1] * self.no_hnodes + e[0]] = 1
 
         self.i = 0
-        self.possibles = vector[vector[int]](self.no_gnodes, vector[int](self.no_gnodes, 0))
+        self.possibles = vector[vector[int]](self.no_gnodes, vector[int](self.no_hnodes, 0))
         for i in range(self.no_gnodes):
             for j in range(self.no_hnodes):
                 self.possibles[i][j] = j
@@ -142,7 +144,7 @@ cdef class Solver:
                     hv = self.soln[gv]
                     if self.g_has_edge(gu, gv) and not self.h_has_edge(hu, hv):
                         approved = False
-                        # self.pruned_h[mapto] += 1
+                        self.pruned_h[mapto] += 1
                         break
             if approved:
                 break
@@ -178,29 +180,25 @@ cdef class Solver:
         return self.srcs[self.i]
 
     # heuristics
-    cpdef choose_target_order(self):
-        pass
-        # i = 0 if self.i < 0 else self.i
-        # ind = self.srcs[i]
-        # def rating_func(h_ind):
-        #     hnd = self.possibles[ind][h_ind]
-        #     srcs_visited = [self.srcs[idx] for idx in range(self.i)]
-        #     map_image = [self.soln[idx] for idx in srcs_visited]
-        #     rating = 0.
-        #     rating += 10000 * len([nb for nb in list(self.h.neighbors(hnd)) if nb in map_image])
-        #     rating += 1000 * len([nb for nb in list(self.h.neighbors(hnd)) if nb not in map_image])
-        #     rating -= self.pruned_h[h_ind]
-        #     return rating
-        # hcolors = [self.possibles[ind][i] for i in range(len(self.possibles[ind]))]
-        # hcolors = sorted(hcolors, key=rating_func, reverse=True)
-        # for x in range(len(list(self.h.nodes()))):
-        #     self.possibles[ind][x] = hcolors[x]
-        # # self.possibles[ind] = [self.possibles[ind][x] for x in sorted(range(len(self.possibles[ind])), key=rating_func, reverse=True)]
+    def choose_target_order(self):
+        i = 0 if self.i < 0 else self.i
+        ind = self.srcs[i]
+        def rating_func(h_ind):
+            hnd = self.possibles[ind][h_ind]
+            map_image = [self.soln[self.srcs[idx]] for idx in range(self.i)]
+            rating = 0.
+            rating += 10000 * len([nb for nb in list(self.h.neighbors(hnd)) if nb in map_image])
+            rating += 1000 * len([nb for nb in list(self.h.neighbors(hnd)) if nb not in map_image])
+            rating -= self.pruned_h[h_ind]
+            return rating
+        hcolors = [val for val in self.possibles[ind]]
+        hcolors.sort(key=rating_func, reverse=True)
+        for x in range(self.no_hnodes):
+            self.possibles[ind][x] = hcolors[x]
 
     cpdef find_solutions(self, stopfunc):
         while True:
             while self.i in range(len(self)):
-                # if self.i < 3:
                 # print(self)
                 if self.action == Solver.FORWARD:
                     # choose g-node
