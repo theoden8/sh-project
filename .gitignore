@@ -7,3 +7,7 @@ gap_config.sh
 graphs
 small_graphs
 unused
+build/
+homomorphism_solver.cpp
+test
+*.so

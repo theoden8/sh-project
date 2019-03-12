@@ -71,9 +71,9 @@ if __name__ == '__main__':
     with open('$file', 'r') as f:
         j = json.load(f)
         nodes = j['nodes']
+        nodes = range(len(nodes))
         edges = j['edges']
         adj = []
-        rng = range(len(nodes))
         for u in nodes:
             row = []
             for v in nodes:
