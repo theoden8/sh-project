@@ -6,15 +6,19 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 # files
 
-* graph_utils.py - simple graph utilities, such as generating, drawing etc
+* graph_utils.py: simple graph utilities, such as generating, drawing etc
 
-* homomorphism_solver.py - mediocre homomorphism solver
+* homomorphism_solver.pyx: mediocre homomorphism solver (rewritten in Cython)
 
-* plot_graph_families.py - generates pictures of some graph families. Exists here for the purposes of testing graph_utils
+* plot_graph_families.py: generates pictures of some graph families. Exists here for the purposes of testing graph_utils
 
-* solve_homomorphism.py - tries to find a homomorphism between two given graphs
+* solve_homomorphism.py: tries to find a homomorphism between two given graphs
 
-* plot_homomorphism.py - generates an image of a given graph homomorphism
+* plot_homomorphism.py: generates an image of a given graph homomorphism
+
+* profile_homomorphism.py: generates an overview of python profiling information on the solver
+
+* setup.py: compile homomorphism solver into a shared library
 
   ---
 
@@ -55,6 +59,12 @@ For full functionality, you will also need:
 * **nauty**
 * **gap**
 * **graphviz**
+
+## compiling
+
+```bash
+env python3 setup.py build_ext --inplace
+```
 
 # resources
 
