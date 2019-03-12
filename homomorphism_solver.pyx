@@ -88,10 +88,10 @@ cdef class Solver:
         cdef int i
         cdef unsigned hcolor
         i = 0 if self.i < 0 else self.i
+        hcolor = self.srcs[i]
         if val == -1:
             val = self.soln_ind()
-        hcolor = self.srcs[i]
-        return val in range(len(self.possibles[hcolor]))
+        return val >= 0 and val < len(self.possibles[hcolor])
 
     cdef void forward_node(self, int mapto):
         cdef int i
@@ -129,7 +129,8 @@ cdef class Solver:
     cdef bool h_has_edge(self, u, v):
         return self.adjacency_h[u * self.no_hnodes + v]
 
-    cpdef find_possible_map(self):
+    cdef int find_possible_map(self):
+        cdef int i, ind, mapto
         i = 0 if self.i < 0 else self.i
         ind = self.srcs[i]
         mapto = self.soln_ind() + 1

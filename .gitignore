@@ -2,6 +2,8 @@
 .ropeproject
 *.png
 *.pkl
+*.so
+*.prof
 !/images/*.png
 gap_config.sh
 graphs
@@ -10,4 +12,3 @@ unused
 build/
 homomorphism_solver.cpp
 test
-*.so
