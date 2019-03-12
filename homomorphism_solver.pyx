@@ -77,6 +77,14 @@ cdef class Solver:
         self.no_solns = 0
         self.solution = None
 
+        assert len(self.possibles) == self.no_gnodes
+        assert len(self.possibles[0]) == self.no_hnodes
+        assert len(self.soln_inds) == self.no_gnodes
+        assert len(self.soln) == self.no_gnodes
+        assert len(self.srcs) == self.no_gnodes
+        assert len(self.error_g) == self.no_gnodes
+        assert len(self.pruned_h) == self.no_hnodes
+
     cdef bool is_last_option(self):
         cdef int i
         cdef unsigned hcolor
@@ -164,6 +172,7 @@ cdef class Solver:
 
     # heuristics
     cpdef choose_best_node(self):
+        cdef int option, rating
         option, rating = -1, -1
         srcs_visited = [self.srcs[i] for i in range(self.i)]
         for ind in range(len(self)):
@@ -186,22 +195,21 @@ cdef class Solver:
         ind = self.srcs[i]
         def rating_func(h_ind):
             hnd = self.possibles[ind][h_ind]
-            map_image = [self.soln[self.srcs[idx]] for idx in range(self.i)]
+            map_image = [self.soln[idx] for idx in self.srcs[:self.i]]
             rating = 0.
             rating += 10000 * len([nb for nb in list(self.h.neighbors(hnd)) if nb in map_image])
             rating += 1000 * len([nb for nb in list(self.h.neighbors(hnd)) if nb not in map_image])
             rating -= self.pruned_h[h_ind]
             return rating
-        hcolors = [val for val in self.possibles[ind]]
+        hcolors = [x for x in self.possibles[ind]]
         hcolors.sort(key=rating_func, reverse=True)
-        for x in range(self.no_hnodes):
-            self.possibles[ind][x] = hcolors[x]
+        self.possibles[ind] = hcolors
 
     cpdef find_solutions(self, stopfunc):
         while True:
             while self.i in range(len(self)):
                 # print(self)
-                if self.action == Solver.FORWARD:
+                if self.action == self.FORWARD:
                     # choose g-node
                     self.srcs[self.i] = self.choose_best_node()
                     if self.is_last_option():
