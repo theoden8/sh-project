@@ -6,10 +6,6 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 # files
 
-* quick_notes.pdf - updated version of notes from papers
-
-  ---
-
 * graph_utils.py - simple graph utilities, such as generating, drawing etc
 
 * homomorphism_solver.py - mediocre homomorphism solver
@@ -36,6 +32,10 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 * gap_homomorphism_core_finder: uses GAP and a dataset of small graphs to find a potential core by trying to find a homomorphism from a given graph
 
+  ---
+
+* quick_notes.pdf - updated version of notes from papers
+
 # limitations
 
 The current version of solver is relatively slow and can't handle large graphs. It is written to work iteratively, and chooses which options to iterate and how, and when to backtrack.
@@ -49,6 +49,8 @@ Some heuristics are being sought to improve its basic performance, such as conne
 ```bash
 env python3 -m pip install -r --user requirements.txt
 ```
+
+For full functionality, **nauty** and **gap** are required.
 
 # resources
 
