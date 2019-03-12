@@ -63,16 +63,33 @@ hfile=$1;shift
     exit 1
 }
 
+create_adjacency_list() {
+    file=$1; shift
+    echo "
+import json
+if __name__ == '__main__':
+    with open('$file', 'r') as f:
+        j = json.load(f)
+        nodes = j['nodes']
+        edges = j['edges']
+        adj = []
+        rng = range(len(nodes))
+        for u in nodes:
+            row = []
+            for v in nodes:
+                e1, e2 = [u, v], [v, u]
+                if e1 in edges or e2 in edges:
+                    row += [v + 1]
+            adj += [row]
+        print(adj)
+    "
+}
+
 gap_script="
 LoadPackage(\"Digraphs\");
 
-g := Digraph([]);
-$(env python3 -c "$(add_nodes_script "$gfile" g)")
-$(env python3 -c "$(add_edges_script "$gfile" g)")
-
-h := Digraph([]);
-$(env python3 -c "$(add_nodes_script "$hfile" h)")
-$(env python3 -c "$(add_edges_script "$hfile" h)")
+g := Digraph($(env python3 -c "$(create_adjacency_list "$gfile")"));
+h := Digraph($(env python3 -c "$(create_adjacency_list "$hfile")"));
 
 # establish somehow if two graphs are homomorphic to each other
 Print(\"RESULT $gfile\t$hfile\t\", DigraphHomomorphism(g, h), \"\\n\");
