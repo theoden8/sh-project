@@ -16,35 +16,34 @@ class Solver:
         self.h = h
         self.possibles = [
             # sorted(list(self.h.nodes()), key=lambda x: abs(self.g.degree()[nd] - self.h.degree()[x]))
-            shifted(list(h.nodes()), nd)
-            # sorted(list(self.h.nodes()))
+            # shifted(list(h.nodes()), nd)
+            sorted(list(self.h.nodes()))
                 for nd in range(len(self.g.nodes()))
         ]
         # self.srcs = [Solver.UNDEFINED for nd in self.g.nodes()]
         # self.srcs = shuffled(list(range(len(self))))
-        self.srcs = list(range(len(self)))
+        self.srcs = list(range(len(self))) # order in which nodes will be colored
         # self.srcs = sorted(list(self.g.nodes()), key=lambda nd: self.g.degree()[nd], reverse=True)
-        self.soln_inds = [Solver.UNDEFINED for nd in self.g.nodes()]
-        self.soln = [Solver.UNDEFINED for nd in self.g.nodes()]
-        self.i = 0
-        self.action = Solver.FORWARD
+        self.soln_inds = [Solver.UNDEFINED for nd in self.g.nodes()] # h-color index within current permutation of possibles
+        self.soln = [Solver.UNDEFINED for nd in self.g.nodes()] # h-color itself
+        self.i = 0 # depth of the recursion
+        self.action = Solver.FORWARD # depth change control indicator
         self.no_solns = 0
-        self.error_g = [0 for nd in self.g.nodes()]
-        self.pruned_h = [0 for nd in self.h.nodes()]
+        self.error_g = [0 for nd in self.g.nodes()] # heuristic: how many times we rolled back from a node
+        self.pruned_h = [0 for nd in self.h.nodes()] # heuristic: how many times we pruned an h-color off
 
     def is_valid_solution(self):
-        dbg = (self.soln == [0, 0, 0, 1, 3, 5, 6])
         assert self.i == len(self)
-        gnodes = list(self.g.nodes())
+        phi = self.soln
         for e in list(self.g.edges()):
             u, v = e
-            u, v = gnodes.index(u), gnodes.index(v)
-            hu, hv = (self.soln[u], self.soln[v])
-            if (hu, hv) not in self.h.edges():
+            hu, hv = phi[u], phi[v]
+            if not self.h.has_edge(hu, hv):
                 return False
         return True
 
     def choose_best_node(self):
+        # return self.srcs[self.i]
         option, rating = -1, -1
         available = [x for x in range(len(self)) if x not in self.srcs[:self.i]]
         for ind in available:
@@ -61,9 +60,9 @@ class Solver:
 
     def is_last_option(self, val=None):
         i = 0 if self.i < 0 else self.i
-        ind = self.srcs[i]
+        ind = self.srcs[i] # current g-node
         if val is None:
-            val = self.soln_ind()
+            val = self.soln_ind() # index of the current h-node
         return val == len(self.possibles[ind]) - 1
 
     def is_valid_option(self, val=None):
@@ -131,23 +130,25 @@ class Solver:
         ind = self.srcs[i]
         return self.soln_inds[ind]
 
-    def find_solutions(self, function=None):
-        if function is None:
+    def find_solutions(self, stopfunc=None):
+        if stopfunc is None:
             def func(soln):
                 self.no_solns += 1
                 return True
-            function = func
+            stopfunc = func
         while True:
             while self.i in range(len(self)):
                 # if self.i < 3:
-                    # print(self)
+                print(self)
                 if self.action == Solver.FORWARD:
+                    # choose g-node
                     self.srcs[self.i] = self.choose_best_node()
                     if self.is_last_option():
                         self.set_rollback()
                 assert self.i >= -1
                 if self.action == Solver.BACKTRACK and self.soln_ind() != Solver.UNDEFINED:
                     if self.i < len(self) / 2:
+                        # select order in which h-colors will be tested
                         self.choose_target_order()
                     pass
                 mapto = self.find_possible_map()
@@ -157,18 +158,20 @@ class Solver:
                     self.set_rollback()
             if self.i < 0:
                 break
-            if self.is_valid_solution():
-                if not function(self.soln):
-                    return
-            # deal with result
+            print(self)
+            assert self.is_valid_solution()
+            if not stopfunc(self.soln):
+                return
             self.i -= 1
             self.action = Solver.BACKTRACK
-        if self.i != -1 and not function(self.soln):
+        if self.i != -1 and not stopfunc(self.soln):
             return
 
     def __str__(self):
         s = 'backtrack' if self.action else 'forward'
-        s += ' ' + str(self.i) + ' soln:' + str([self.soln_inds[x] for x in self.srcs])
+        s += ' ' + str(self.i) + ' soln:'
+        # s += str([self.soln_ind[x] for x in self.srcs])
+        s += str(self.soln)
         return s
 
     def __len__(self):
@@ -185,7 +188,7 @@ def is_homomorphic(g, h):
     def func(soln):
         s.no_solns = 1
         return False
-    s.find_solutions(function=func)
+    s.find_solutions(stopfunc=func)
     if s.no_solns == 1:
         return s.soln
     return None
