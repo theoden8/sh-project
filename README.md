@@ -50,7 +50,11 @@ Some heuristics are being sought to improve its basic performance, such as conne
 env python3 -m pip install -r --user requirements.txt
 ```
 
-For full functionality, **nauty** and **gap** are required.
+For full functionality, you will also need:
+
+* **nauty**
+* **gap**
+* **graphviz**
 
 # resources
 
