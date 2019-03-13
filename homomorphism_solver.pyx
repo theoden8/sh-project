@@ -77,14 +77,6 @@ cdef class Solver:
         self.no_solns = 0
         self.solution = None
 
-        assert len(self.possibles) == self.no_gnodes
-        assert len(self.possibles[0]) == self.no_hnodes
-        assert len(self.soln_inds) == self.no_gnodes
-        assert len(self.soln) == self.no_gnodes
-        assert len(self.srcs) == self.no_gnodes
-        assert len(self.error_g) == self.no_gnodes
-        assert len(self.pruned_h) == self.no_hnodes
-
     cdef bool is_last_option(self):
         cdef int i
         cdef unsigned hcolor
