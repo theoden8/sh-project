@@ -79,11 +79,18 @@ For full functionality, you will also need:
 ./generate_small_graphs.py
 # generate some bigger graphs (15 being the size of the graph):
 ./generate_connected_graph.py 15
-# use gap to check if two graphs are homomorphic:
+
+# use GAP to check if G -> H:
 ./gap_is_homomorphic_gh <gfile> <hfile>
-# test homomorphism solver
-# create gap_config.sh and specify a path to GAP
+# use python solver to check if G -> H:
+time ./solve_homomorphism.py <gfile> <hfile>
+# plot homomorphism G -> H (side by side):
+./plot_homomorphism.py <gfile> <hfile>
+# profile homomorphism solver G -> H:
+./profile_homomorphism.py <gfile> <hfile>
+# test the solver:
 ./test_solver
+
 # make lattice out of given graphs, by specifying graphs in the argument list, e.g.:
 ./make_lattice.py small_graphs/graph_{1,2,3,4,5}_*.json
 ```
