@@ -5,6 +5,8 @@
 *.so
 *.prof
 *.json
+*.mp3
+*.mp4
 !/images/*.png
 gap_config.sh
 graphs

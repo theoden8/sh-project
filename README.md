@@ -42,6 +42,16 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 * make_lattice.py: incrementally constructs a partial order graph out of given files, and produces an image
 
+* lattice_utils.py: utilities for lattice operations
+
+* make_lattice_animation.py: construct frames for an animation
+
+* make_lattice_frame.py: construct individual image frame from a snapshot
+
+* make_frames: construct image frames from snapshots in parallel
+
+* make_movie: make a movie out of frames
+
 * quick_notes.pdf: updated version of notes from papers
 
 ## solver

@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import math
 
 from networkx.drawing.nx_agraph import graphviz_layout
 import cairo
@@ -186,21 +187,27 @@ def plot_lattice(g, filename, **kwargs):
     #         new_g = nx.contracted_edge(new_g, e)
     # print('reduced insignificant loops')
 
+    no_nodes = len(nodelist_neighborhood)
+    fontsize = 9 - int(math.log(no_nodes, 5))
+    nodesize_min = 150 - 20 * int(math.log(no_nodes, 5))
+    nodesize_max = 700 - 100 * int(math.log(no_nodes, 5))
+    nodesize_step = 200 - 10 * int(math.log(no_nodes, 5))
     nx.draw_networkx(new_g,
                      arrows=True,
-                     pos=graphviz_layout(new_g),
-                     # pos=nx.kamada_kawai_layout(new_g, dim=2),
+                     # pos=graphviz_layout(new_g),
+                     pos=nx.kamada_kawai_layout(new_g, dim=2),
                      # pos=nx.spring_layout(g, dim=2),
                      nodelist=nodelist_neighborhood,
                      labels={nd : label_rename(nd) for nd in nodelist},
-                     font_size=8,
+                     font_size=fontsize,
                      # font_family='arial',
                      font_weight='bold',
                      font_color='k',
                      alpha=1.,
                      node_color=[node_color_func(nd) for nd in nodelist_neighborhood],
                      # node_size=[500 for nd in nodelist_neighborhood],
-                     node_size=[(max(150, 600 - 200 * (new_g.degree(nd) - 2)) if nd in nodelist else 30) for nd in nodelist_neighborhood],
+                     node_size=[(max(nodesize_min, nodesize_max - nodesize_step * (new_g.degree(nd) - 2)) if nd in nodelist else 30)
+                                for nd in nodelist_neighborhood],
                      edge_color=['k' if g.has_edge(e[0], e[1]) else 'b' for e in new_g.edges()],
                      width=[0.2 if g.has_edge(e[0], e[1]) else 0.4 for e in new_g.edges()],
                      arrowstyle='-|>',
