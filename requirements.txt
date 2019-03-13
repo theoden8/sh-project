@@ -3,3 +3,4 @@ matplotlib>=2.1.0
 cython>=0.29.0
 pycallgraph>=1.0.1
 pygraphviz>=1.4
+pycairo>=1.15.0
