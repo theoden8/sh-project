@@ -23,8 +23,8 @@ cdef class Solver:
     cdef public object h
     cdef public int no_gnodes
     cdef public int no_hnodes
-    cdef public vector[int] adjacency_g
-    cdef public vector[int] adjacency_h
+    cdef public vector[bool] adjacency_g
+    cdef public vector[bool] adjacency_h
 
     cdef public int i
     cdef public int action
@@ -47,14 +47,14 @@ cdef class Solver:
 
         self.g = g
         self.no_gnodes = len(g.nodes())
-        self.adjacency_g = vector[int](self.no_gnodes ** 2, 0)
+        self.adjacency_g = vector[bool](self.no_gnodes ** 2, 0)
         for e in g.edges():
             self.adjacency_g[e[0] * self.no_gnodes + e[1]] = 1
             self.adjacency_g[e[1] * self.no_gnodes + e[0]] = 1
 
         self.h = h
         self.no_hnodes = len(h.nodes())
-        self.adjacency_h = vector[int](self.no_hnodes ** 2, 0)
+        self.adjacency_h = vector[bool](self.no_hnodes ** 2, 0)
         for e in h.edges():
             self.adjacency_h[e[0] * self.no_hnodes + e[1]] = 1
             self.adjacency_h[e[1] * self.no_hnodes + e[0]] = 1
