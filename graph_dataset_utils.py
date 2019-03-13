@@ -7,7 +7,7 @@ from graph_utils import *
 
 def download_dataset(link, filename):
     if not os.path.exists(filename):
-        command = ['wget', '-q', link, '-o', filename]
+        command = ['wget', '-q', link, '-O', filename]
         subprocess.check_call(command)
 
 

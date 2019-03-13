@@ -147,8 +147,7 @@ def deserialize_graph(s):
     nodes = s['nodes']
     edges = s['edges']
     g = nx.Graph()
-    for e in edges:
-        g.add_edge(e[0], e[1])
+    g.add_edges_from(edges)
     return g
 
 def deserialize_digraph(s):
@@ -158,6 +157,5 @@ def deserialize_digraph(s):
     g = nx.DiGraph()
     for nd in nodes:
         g.add_node(nd)
-    for e in edges:
-        g.add_edge(e[0], e[1])
+    g.add_edges_from(edges)
     return g
