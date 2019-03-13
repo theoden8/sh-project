@@ -1,0 +1,15 @@
+#!/bin/bash
+
+last_frame=
+for frame in $(find . -name "frame_*.png" | sort -V); do
+    last_frame="$frame"
+done
+
+for i in {0..10000}; do
+    frame="./frame_${i}.png"
+    [ "$frame" = "$last_frame" ] && break
+    ! [ -e "${frame}" ] && {
+        echo "$frame"
+        cp "frame_$((i - 1)).png" "${frame}"
+    }
+done

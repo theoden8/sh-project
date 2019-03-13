@@ -16,4 +16,4 @@ find frames -name 'frame_lattice_*.json' | sort -V | while IFS= read -r line; do
         ((++nothreads))
     }
 done
-# wait
+wait
