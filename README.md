@@ -89,12 +89,18 @@ For full functionality, you will also need:
 
 ### usage
 
+#### generating/downloading graphs
+
 ```bash
 # download small graphs:
 ./generate_small_graphs.py
 # generate some bigger graphs (15 being the size of the graph):
 ./generate_connected_graph.py 15
+```
 
+#### homomorphism solver
+
+```bash
 # use GAP to check if G -> H:
 ./gap_is_homomorphic_gh <gfile> <hfile>
 # use python solver to check if G -> H:
@@ -105,9 +111,26 @@ time ./solve_homomorphism.py <gfile> <hfile>
 ./profile_homomorphism.py <gfile> <hfile>
 # test the solver:
 ./gap_test_solver
+```
 
+#### lattice
+
+```bash
 # make lattice out of given graphs, by specifying graphs in the argument list, e.g.:
 ./make_lattice.py small_graphs/graph_{1,2,3,4,5}_*.json
+# verify relations
+./gap_test_lattice_relations
+```
+
+##### animation
+
+```bash
+# generate lattice snapshots for each frame
+./make_lattice_animation.py
+# generate frames for the animation. should use multiple machines simultaneously, in the same FS:
+./make_frames
+cd frames
+./make_movie
 ```
 
 # resources
