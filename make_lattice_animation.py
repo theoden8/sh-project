@@ -16,10 +16,10 @@ def sort_func(gfile):
 def get_all_lattice_nodes(lattice_fname):
     if not os.path.exists(lattice_fname):
         return None
-    g = None
+    lattice = None
     with open(lattice_fname, 'r') as f:
-        g = deserialize_digraph(f.read())
-    nodes = list(g.nodes())
+        lattice = deserialize_lattice(f.read())
+    nodes = list(lattice.g.nodes())
     nodes.sort(key=sort_func)
     return nodes
 
@@ -31,7 +31,6 @@ if __name__ == '__main__':
         os.mkdir('./frames/')
 
     nodes = get_all_lattice_nodes('./lattice.json')
-
     lattice = Lattice(nx.DiGraph())
 
     i = 0
@@ -45,11 +44,10 @@ if __name__ == '__main__':
                 json.dump(serialize_graph(lattice.g), f)
         # if it does, just play it
         else:
-            new_g = None
+            lattice = None
             with open(frame_lattice_name, 'r') as f:
-                new_g = deserialize_digraph(f.read())
-            lattice = Lattice(new_g)
-        if not os.path.exists(frame_name):
-            print('making new frame', frame_name)
-            plot_lattice(lattice.g, frame_name)
+                lattice = deserialize_lattice(f.read())
+        # if not os.path.exists(frame_name):
+        #     print('making new frame', frame_name)
+        #     plot_lattice(lattice.g, frame_name)
         i += 1

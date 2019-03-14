@@ -38,6 +38,8 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 * gap_is_homomorphic_gh: uses GAP solver to print "YES" or "NO" if two graphs are homomorphic
 
+* gap_test_lattice_relations: uses GAP solver to verify that lattice relations are correct
+
   ---
 
 * make_lattice.py: incrementally constructs a partial order graph out of given files, and produces an image

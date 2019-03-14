@@ -4,19 +4,21 @@
 fname="lattice.json"
 env python3 -c "
 from graph_utils import *
-from random import randint
+from lattice_utils import *
+from random import choice
 
 if __name__ == '__main__':
-    g = None
+    lattice = None
     with open('${fname}', 'r') as f:
-        g = deserialize_digraph(f.read())
+        lattice = deserialize_lattice(f.read())
+    g = lattice.g
     g_nodes = list(g.nodes())
     n = len(g_nodes)
-    row1 = shuffled(g_nodes)
-    row2 = shuffled(g_nodes)
-    for i in range(n):
-        a = row1[randint(0, n-1)]
-        b = row2[randint(0, n-1)]
+    for i in range(n*n):
+        a = choice(g_nodes)
+        b = choice(g_nodes)
+        while a == b:
+            b = choice(g_nodes)
         res = nx.has_path(g, a, b)
         print(a)
         print(b)
@@ -33,19 +35,40 @@ if __name__ == '__main__':
 from graph_utils import *
 
 if __name__ == '__main__':
-    g = None
+    lattice = None
     with open('${fname}', 'r') as f:
-        g = deserialize_digraph(f.read())
-    print('erroneous path:', list(nx.shortest_path(g, '$gfile', '$hfile')))
+        lattice = deserialize_lattice(f.read())
+    print('erroneous path:', list(nx.shortest_path(lattice.g, '$gfile', '$hfile')))
 "
         } || {
             sh_res=$(./solve_homomorphism.py "$gfile" "$hfile" | tail -1)
             [ -z "$(echo "$line" | grep fail)" ] && sh_res="YES" || sh_res="NO"
 
             [ "$sh_res" = "$gap_res" ] && {
-                >&2 echo "error traced to the lattice"
+                >&2 printf "\ttraced to lattice\n"
+                >&2 env python3 -c "
+# test if non-edges are causing any problems
+from lattice_utils import *
+from graph_utils import *
+
+if __name__ == '__main__':
+    lattice = None
+    with open('${fname}', 'r') as f:
+        lattice = deserialize_lattice(f.read())
+    if '$gfile' not in lattice.nonedges:
+        print('\tno problems detected: $gfile does not have non-edges')
+        sys.exit(0)
+    for nh in lattice.nonedges['$gfile']:
+        if nh == '$hfile':
+            print('\t$gfile is explicitly a non-edge to $hfile')
+            sys.exit(0)
+        if nx.has_path(lattice.g, '$hfile', nh):
+            print('\terroneous nonedge $gfile -> %s, hence $hfile ignored' % nh)
+            sys.exit(0)
+    print('\tno problems detected in existing non-edges')
+"
             } || {
-                >&2 echo "error traced to the solver $sh_res"
+                >&2 printf "\ttraced to solver $sh_res\n"
             }
         }
         cat > /dev/null

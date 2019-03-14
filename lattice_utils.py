@@ -12,49 +12,79 @@ from lattice_utils import *
 
 
 class Lattice:
-    def __init__(self, g):
+    def __init__(self, g, nonedges={}):
         self.g = g
+        self.nonedges = nonedges
 
     def add_object(self, filename):
         nodename = filename
+        print('adding object', nodename)
         nodes = list(self.g.nodes())
         if nodename in nodes:
             print('already exists', nodename)
             return
         self.g.add_node(nodename)
-        not_connected = []
         for other_graph in nodes:
-            should_check = True
-            for not_homomorphic in not_connected:
-                if nx.has_path(self.g, other_graph, not_homomorphic):
-                    should_check = False
-                    break
-            if should_check:
-                result = self.establish_order(nodename, other_graph)
-                if not result:
-                    not_connected += [other_graph]
-            self.establish_order(other_graph, nodename)
+            self.set_relation(nodename, other_graph)
+            self.set_relation(other_graph, nodename)
 
-    def establish_order(self, gfile, hfile):
+    def set_relation(self, gfile, hfile):
+        if gfile == hfile:
+            return
+        if gfile not in self.nonedges:
+            self.nonedges[gfile] = []
+        if self.should_check(gfile, hfile):
+            result = self.is_homomorphic(gfile, hfile)
+            if not result:
+                self.nonedges[gfile] += [hfile]
+
+    def should_check(self, gfile, hfile):
+        if gfile not in self.nonedges:
+            return True
+        for nh in self.nonedges[gfile]:
+            if nx.has_path(self.g, hfile, nh):
+                return False
+        return True
+
+    def is_homomorphic(self, gfile, hfile):
         G, H = None, None
         if nx.has_path(self.g, gfile, hfile):
             return True
         with open(gfile, 'r') as f:
             G = deserialize_graph(f.read())
-        reach = nx.dfs_tree(self.g, hfile)
-        reach_nodes = list(reach.nodes())
         with open(hfile, 'r') as f:
             H = deserialize_graph(f.read())
         phi = is_homomorphic(G, H)
         if phi is None:
             return False
         print('%s -> %s' % (gfile, hfile))
-        for out in reach_nodes:
-            if self.g.has_edge(gfile, out) and nx.has_path(self.g, hfile, out):
-                self.g.remove_edge(gfile, out)
-                print('\t%s /-> %s' % (gfile, out))
+        reach_nodes = [nd for nd in nx.dfs_tree(self.g, hfile).nodes()
+                       if nd != hfile and nx.has_path(self.g, hfile, nd)]
         self.g.add_edge(gfile, hfile)
+        for out in reach_nodes:
+            if self.g.has_edge(gfile, out):
+                self.g.remove_edge(gfile, out)
+                if not nx.has_path(self.g, hfile, out):
+                    self.g.add_edge(gfile, out)
+                if not self.g.has_edge(gfile, out):
+                    print('\t%s /-> %s' % (gfile, out))
+            assert nx.has_path(self.g, gfile, out)
         return True
+
+
+def serialize_lattice(lattice):
+    j = serialize_graph(lattice.g)
+    j['nonedges'] = lattice.nonedges
+    return j
+
+
+def deserialize_lattice(s):
+    j = json.loads(s)
+    nodes = j['nodes']
+    edges = j['edges']
+    g = deserialize_digraph(json.dumps({'nodes':nodes,'edges':edges}))
+    nonedges = j['nonedges']
+    return Lattice(g, nonedges)
 
 
 def is_complete(g):
@@ -210,8 +240,8 @@ def plot_lattice(g, filename, **kwargs):
                      # node_size=[500 for nd in nodelist_neighborhood],
                      node_size=[(max(nodesize_min, nodesize_max - nodesize_step * (new_g.degree(nd) - 2)) if nd in nodelist else 30)
                                 for nd in nodelist_neighborhood],
-                     edge_color=['k' if g.has_edge(e[0], e[1]) else 'b' for e in new_g.edges()],
-                     width=[0.2 if g.has_edge(e[0], e[1]) else 0.4 for e in new_g.edges()],
+                     edge_color=[('m' if g.has_edge(e[1], e[0]) else 'k') if g.has_edge(e[0], e[1]) else 'b' for e in new_g.edges()],
+                     width=[(0.2 if g.has_edge(e[1], e[0]) else 0.4) if g.has_edge(e[0], e[1]) else 0.4 for e in new_g.edges()],
                      arrowstyle='-|>',
                      arrowsize=10,
                      ax=ax)

@@ -10,9 +10,9 @@ if __name__ == '__main__':
     for lattice_frame in sys.argv[1:]:
         if not os.path.exists(lattice_frame):
             continue
-        g = None
+        lattice = None
         with open(lattice_frame, 'r') as f:
-            g = deserialize_digraph(f.read())
+            lattice = deserialize_lattice(f.read())
         frame_name = lattice_frame.replace('lattice_', '').replace('.json', '.png')
-        plot_lattice(g, frame_name)
+        plot_lattice(lattice.g, frame_name)
         print('generated frame', frame_name)
