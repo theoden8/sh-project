@@ -11,6 +11,7 @@ import networkx as nx
 
 
 from libcpp.vector cimport vector
+from libcpp.set cimport set
 from libcpp cimport bool
 
 
@@ -19,26 +20,26 @@ cdef class Solver:
     cdef readonly int FORWARD
     cdef readonly int BACKTRACK
 
-    cdef public object g
-    cdef public object h
-    cdef public int no_gnodes
-    cdef public int no_hnodes
-    cdef public vector[bool] adjacency_g
-    cdef public vector[bool] adjacency_h
+    cdef object g
+    cdef object h
+    cdef int no_gnodes
+    cdef int no_hnodes
+    cdef vector[bool] adjacency_g
+    cdef vector[bool] adjacency_h
 
-    cdef public int i
-    cdef public int action
-    cdef public vector[vector[int]] possibles
-    cdef public vector[int] srcs
-    cdef public vector[int] soln_inds
-    cdef public vector[int] soln
+    cdef int i
+    cdef int action
+    cdef vector[vector[int]] possibles
+    cdef vector[int] srcs
+    cdef vector[int] soln_inds
+    cdef vector[int] soln
 
     # heuristics
-    cdef public vector[int] error_g #
-    cdef public vector[int] pruned_h
+    cdef vector[int] error_g
+    cdef vector[int] pruned_h
 
-    cdef int no_solns
-    cdef object solution
+    cdef public int no_solns
+    cdef public object solution
 
     def __init__(self, object g, object h):
         self.UNDEFINED = -1
@@ -77,23 +78,23 @@ cdef class Solver:
         self.no_solns = 0
         self.solution = None
 
-    cdef bool is_last_option(self):
+    cdef bool is_last_option(self) nogil:
         cdef int i
         cdef unsigned hcolor
         i = 0 if self.i < 0 else self.i
         hcolor = self.srcs[i]
-        return self.soln_ind() == len(self.possibles[hcolor]) - 1
+        return self.soln_ind() == self.possibles[hcolor].size() - 1
 
-    cdef bool is_valid_option(self, int val=-1):
+    cdef bool is_valid_option(self, int val=-1) nogil:
         cdef int i
         cdef unsigned hcolor
         i = 0 if self.i < 0 else self.i
         hcolor = self.srcs[i]
         if val == -1:
             val = self.soln_ind()
-        return val >= 0 and val < len(self.possibles[hcolor])
+        return val >= 0 and val < self.possibles[hcolor].size()
 
-    cdef void forward_node(self, int mapto):
+    cdef void forward_node(self, int mapto) nogil:
         cdef int i
         cdef unsigned ind
         cdef unsigned hcolor
@@ -105,10 +106,10 @@ cdef class Solver:
         self.soln[ind] = self.possibles[ind][hcolor]
         self.i += 1
 
-    cdef void set_rollback(self):
+    cdef void set_rollback(self) nogil:
         cdef int i
         cdef unsigned ind
-        i = 0 if self.i == -1 else self.i
+        i = max(0, self.i)
         ind = self.srcs[i]
         self.error_g[ind] += 1
         self.action = self.BACKTRACK
@@ -117,19 +118,18 @@ cdef class Solver:
         self.soln[ind] = self.UNDEFINED
         self.i -= 1
 
-    cdef int soln_ind(self):
-        cdef int i, ind
-        i = 0 if self.i < 0 else self.i
-        ind = self.srcs[i]
-        return self.soln_inds[ind]
+    cdef int soln_ind(self) nogil:
+        cdef int i
+        i = max(0, self.i)
+        return self.soln_inds[self.srcs[i]]
 
-    cdef bool g_has_edge(self, u, v):
+    cdef inline bool g_has_edge(self, int u, int v) nogil:
         return self.adjacency_g[u * self.no_gnodes + v]
 
-    cdef bool h_has_edge(self, u, v):
+    cdef inline bool h_has_edge(self, int u, int v) nogil:
         return self.adjacency_h[u * self.no_hnodes + v]
 
-    cdef int find_possible_map(self):
+    cdef inline int find_possible_map(self) nogil:
         cdef int i, ind, mapto
         i = 0 if self.i < 0 else self.i
         ind = self.srcs[i]
@@ -139,7 +139,7 @@ cdef class Solver:
             approved = True
             if i > 0:
                 gu = ind
-                hu = self.possibles[ind][mapto]
+                hu = self.possibles[gu][mapto]
                 for j in range(i):
                     gv = self.srcs[j]
                     hv = self.soln[gv]
@@ -152,17 +152,16 @@ cdef class Solver:
             mapto += 1
         return mapto
 
-    cpdef is_valid_solution(self):
-        assert self.i == len(self)
-        phi = [self.soln[i] for i in range(len(self.soln))]
+    cdef is_valid_solution(self):
+        assert self.i == self.soln.size()
         for e in list(self.g.edges()):
             u, v = e
-            hu, hv = phi[u], phi[v]
+            hu, hv = self.soln[u], self.soln[v]
             if not self.h_has_edge(hu, hv):
                 return False
         return True
 
-    cdef int count_g_neighbors_in_set(self, int node, nodes):
+    cdef int count_g_neighbors_in_set(self, int node, vector[int] nodes) nogil:
         cdef int ret
         ret = 0
         for out in nodes:
@@ -170,7 +169,7 @@ cdef class Solver:
                 ret += 1
         return ret
 
-    cdef int count_h_neighbors_in_set(self, int node, nodes):
+    cdef int count_h_neighbors_in_set(self, int node, vector[int] nodes) nogil:
         cdef int ret
         ret = 0
         for out in nodes:
@@ -179,12 +178,15 @@ cdef class Solver:
         return ret
 
     # heuristics
-    cpdef choose_best_node(self):
-        cdef int option, rating
+    cdef choose_best_node(self):
+        cdef int option, rating, new_rating, ind
+        cdef vector[int] srcs_visited
+        cdef set[int] visited
         option, rating = -1, -1
-        srcs_visited = [self.srcs[i] for i in range(self.i)]
+        srcs_visited = self.srcs[:self.i]
+        visited = set[int](self.srcs[:self.i])
         for ind in range(len(self)):
-            if ind in srcs_visited:
+            if visited.count(ind):
                 continue
             new_rating = 0
             new_rating += 100 * self.count_g_neighbors_in_set(ind, srcs_visited)
@@ -197,22 +199,30 @@ cdef class Solver:
             return option
         return self.srcs[self.i]
 
+    cdef int choose_target_rating_func(self, int g_ind, int h_ind) nogil:
+        cdef int i, target, nb_count, rating
+        cdef vector[int] map_image
+        i = max(0, self.i)
+        target = self.possibles[g_ind][h_ind]
+        map_image = vector[int](i)
+        for idx in range(i):
+            map_image[idx] = self.soln[self.srcs[idx]]
+        # map_image = [self.soln[idx] for idx in self.srcs[:i]]
+        rating = 0
+        nb_count = self.count_h_neighbors_in_set(target, map_image)
+        rating += 10000 * nb_count
+        rating += 1000 * (map_image.size() - nb_count)
+        rating += self.pruned_h[h_ind]
+        return rating
+
     # heuristics
-    def choose_target_order(self):
-        i = 0 if self.i < 0 else self.i
-        ind = self.srcs[i]
-        def rating_func(h_ind):
-            hnd = self.possibles[ind][h_ind]
-            map_image = [self.soln[idx] for idx in self.srcs[:self.i]]
-            rating = 0.
-            nb_count = self.count_h_neighbors_in_set(hnd, map_image)
-            rating += 10000 * nb_count
-            rating += 1000 * (len(map_image) - nb_count)
-            rating -= self.pruned_h[h_ind]
-            return rating
-        hcolors = [x for x in self.possibles[ind]]
-        hcolors.sort(key=rating_func, reverse=True)
-        self.possibles[ind] = hcolors
+    cdef void choose_target_order(self):
+        cdef int i, g_ind
+        i = max(0, self.i)
+        g_ind = self.srcs[i]
+        hcolors = [x for x in self.possibles[g_ind]]
+        hcolors.sort(key=lambda h_ind: self.choose_target_rating_func(g_ind, h_ind), reverse=True)
+        self.possibles[g_ind] = hcolors
 
     cpdef find_solutions(self, stopfunc):
         while True:
@@ -254,7 +264,7 @@ cdef class Solver:
         return s
 
     def __len__(self):
-        return len(self.soln)
+        return self.no_gnodes
 
 
 def find_homomorphisms(g, h):
