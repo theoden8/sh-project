@@ -30,7 +30,7 @@ This repository contains files related to the SH project called "Graph Homomorph
 
   ---
 
-* test_solver: compares GAP solver's result with the solver
+* gap_test_solver: compares GAP solver's result with the solver
 
 * gap_homomorphism_finder: uses GAP graph homomorphism finder to find a homomorphism between two graphs
 
@@ -104,7 +104,7 @@ time ./solve_homomorphism.py <gfile> <hfile>
 # profile homomorphism solver G -> H:
 ./profile_homomorphism.py <gfile> <hfile>
 # test the solver:
-./test_solver
+./gap_test_solver
 
 # make lattice out of given graphs, by specifying graphs in the argument list, e.g.:
 ./make_lattice.py small_graphs/graph_{1,2,3,4,5}_*.json
