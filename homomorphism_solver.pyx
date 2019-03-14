@@ -162,6 +162,22 @@ cdef class Solver:
                 return False
         return True
 
+    cdef int count_g_neighbors_in_set(self, int node, nodes):
+        cdef int ret
+        ret = 0
+        for out in nodes:
+            if self.g_has_edge(node, out):
+                ret += 1
+        return ret
+
+    cdef int count_h_neighbors_in_set(self, int node, nodes):
+        cdef int ret
+        ret = 0
+        for out in nodes:
+            if self.h_has_edge(node, out):
+                ret += 1
+        return ret
+
     # heuristics
     cpdef choose_best_node(self):
         cdef int option, rating
@@ -171,8 +187,8 @@ cdef class Solver:
             if ind in srcs_visited:
                 continue
             new_rating = 0
-            new_rating += 100 * len([nd for nd in list(self.g.neighbors(ind)) if nd in srcs_visited])
-            new_rating += 50 * len([nd for nd in list(self.g.neighbors(ind)) if nd not in srcs_visited])
+            new_rating += 100 * self.count_g_neighbors_in_set(ind, srcs_visited)
+            new_rating += 50 * self.count_h_neighbors_in_set(ind, srcs_visited)
             if new_rating > rating:
                 option, rating = ind, new_rating
             elif new_rating == rating and self.error_g[ind] > self.error_g[option]:
@@ -189,8 +205,9 @@ cdef class Solver:
             hnd = self.possibles[ind][h_ind]
             map_image = [self.soln[idx] for idx in self.srcs[:self.i]]
             rating = 0.
-            rating += 10000 * len([nb for nb in list(self.h.neighbors(hnd)) if nb in map_image])
-            rating += 1000 * len([nb for nb in list(self.h.neighbors(hnd)) if nb not in map_image])
+            nb_count = self.count_h_neighbors_in_set(hnd, map_image)
+            rating += 10000 * nb_count
+            rating += 1000 * (len(map_image) - nb_count)
             rating -= self.pruned_h[h_ind]
             return rating
         hcolors = [x for x in self.possibles[ind]]
