@@ -158,12 +158,12 @@ def node_color_func(label):
     return '#FFCCCC'
 
 
-def has_only_one_bidirectional_neighbor(g, label):
-    if g.in_degree(label) != 0 or g.out_degree(label) != 0:
+def filter_significant_nodes(g, label):
+    if g.in_degree(label) != 1 or g.out_degree(label) != 1:
+        return True
+    nb = list(g.neighbors(label))[0]
+    if g.has_edge(nb, label):
         return False
-    for nb in g.neighbors(nd):
-        if g.has_edge(nb, nd):
-            return False
     return True
 
 
@@ -180,7 +180,7 @@ def plot_lattice(g, filename, **kwargs):
     new_g = g
 
     if len(nodelist) > 100:
-        nodelist = [nd for nd in g.nodes() if not has_only_one_bidirectional_neighbor(g, nd)]
+        nodelist = [nd for nd in g.nodes() if filter_significant_nodes(g, nd)]
         # nodelist = [nd for nd in g.nodes() if filter_important_nodes(g, nd)]
         # print('filtered significant nodes')
         # nodelist_neighborhood = [ndm for ndm in g.nodes()
