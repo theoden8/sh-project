@@ -1,31 +1,5 @@
 #!/bin/bash
 
-add_nodes_script() {
-    file=$1; shift
-    var=$1; shift
-    echo "
-import json
-with open('$file', 'r') as f:
-    j = json.load(f)
-    nodes = [x + 1 for x in j['nodes']]
-    for nd in nodes:
-        print('$var := DigraphAddVertex($var, %s);' % nd)
-    " # | tee /dev/stderr
-}
-add_edges_script() {
-    file=$1; shift
-    var=$1; shift
-    echo "
-import json
-with open('$file', 'r') as f:
-    j = json.load(f)
-    edges = [[a + 1, b + 1] for a, b in j['edges']]
-    for e in edges:
-        print('$var := DigraphAddEdge($var, [%s, %s]);' % (e[0], e[1]))
-        print('$var := DigraphAddEdge($var, [%s, %s]);' % (e[1], e[0]))
-    " # | tee /dev/stderr
-}
-
 [ -f "./gap_config.sh" ] && {
     . ./gap_config.sh
 }
