@@ -1,6 +1,7 @@
 *.pyc
 .ropeproject
 *.png
+*.svg
 *.pkl
 *.so
 *.prof

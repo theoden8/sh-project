@@ -120,7 +120,7 @@ def node_color_func(label):
         elif is_complete(g):
             return '#66FF66'
         elif n <= 5:
-            return 'c'#66FFFF'
+            return '#00AAAA'
         elif n == 6:
             return '#9999FF'
         elif n >= 7:
@@ -172,20 +172,22 @@ def plot_lattice(g, filename, **kwargs):
     nodelist = list(g.nodes())
     nodelist_neighborhood = nodelist
     new_g = g
-    # nodelist = [nd for nd in g.nodes() if filter_important_nodes(g, nd)]
-    # print('filtered significant nodes')
-    # nodelist_neighborhood = [ndm for ndm in g.nodes()
-    #                          if ndm in nodelist or (filter_important_nodes_neighborhood(g, nodelist, ndm)
-    #                             and 'small_graphs' in ndm)]
 
-    # new_g = g
-    # for e in g.edges():
-    #     u, v = e
-    #     if v in nodelist_neighborhood:
-    #         continue
-    #     if new_g.has_edge(u, v):
-    #         new_g = nx.contracted_edge(new_g, e)
-    # print('reduced insignificant loops')
+    if len(nodelist) > 100:
+        nodelist = [nd for nd in g.nodes() if filter_important_nodes(g, nd)]
+        print('filtered significant nodes')
+        nodelist_neighborhood = [ndm for ndm in g.nodes()
+                                 if ndm in nodelist or (filter_important_nodes_neighborhood(g, nodelist, ndm)
+                                    and 'small_graphs' in ndm)]
+
+        new_g = g
+        for e in g.edges():
+            u, v = e
+            if v in nodelist_neighborhood:
+                continue
+            if new_g.has_edge(u, v):
+                new_g = nx.contracted_edge(new_g, e)
+        print('reduced insignificant loops')
 
     no_nodes = len(nodelist_neighborhood)
     fontsize = 9 - int(math.log(no_nodes, 5))
@@ -286,16 +288,13 @@ def plot_adjacency_matrix(g, filename):
                 if col_color in color_priority and color_priority.index(col_color) < color_priority.index(cell_color):
                     cell_color = col_color
 
-                if g.has_edge(g_nodes[i], g_nodes[j]):
-                    cell_color = black
-
-                if cell_color != white:
+                if g.has_edge(g_nodes[i], g_nodes[j]) or nx.has_path(g, g_nodes[i], g_nodes[j]):
                     cr, cg, cb = cell_color
                     ctx.rectangle(i * rectsize, j * rectsize, rectsize, rectsize)
                     ctx.set_source_rgba(cr, cg, cb, 1.)
                     ctx.fill()
             ctx.stroke()
-
+    print('finished creating a diagram')
     subprocess.check_call(['convert', svg_fname, filename])
     os.remove(svg_fname)
     print('generated adjacency matrix', filename)
