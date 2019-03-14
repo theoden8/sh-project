@@ -86,6 +86,7 @@ For full functionality, you will also need:
 * **gap**
 * **graphviz**
 * **librsvg2-bin**
+* **ffmpeg**
 
 ### usage
 
