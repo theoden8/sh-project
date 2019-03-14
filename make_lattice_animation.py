@@ -41,7 +41,7 @@ if __name__ == '__main__':
         if not os.path.exists(frame_lattice_name):
             lattice.add_object(nd)
             with open(frame_lattice_name, 'w') as f:
-                json.dump(serialize_graph(lattice.g), f)
+                json.dump(serialize_lattice(lattice), f)
         # if it does, just play it
         else:
             lattice = None
