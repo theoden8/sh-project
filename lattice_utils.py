@@ -280,6 +280,13 @@ def plot_adjacency_matrix(g, filename):
         rectsize = float(size) / n
         g_nodes = list(g.nodes())
         color_priority = [gray, yellow, green, cyan, white]
+        def sort_func(gfile):
+            with open(gfile, 'r') as f:
+                g = deserialize_digraph(f.read())
+            n = len(g.nodes())
+            e = len(g.edges())
+            return n * 10000 + e
+        g_nodes.sort(key=sort_func)
         for i in range(n):
             row_color = graph_color(g_nodes[i])
             for j in range(n):
@@ -295,6 +302,6 @@ def plot_adjacency_matrix(g, filename):
                     ctx.fill()
             ctx.stroke()
     print('finished creating a diagram')
-    subprocess.check_call(['convert', svg_fname, filename])
+    subprocess.check_call(['rsvg-convert', svg_fname, '-o', filename])
     os.remove(svg_fname)
     print('generated adjacency matrix', filename)

@@ -81,6 +81,7 @@ For full functionality, you will also need:
 * **nauty**
 * **gap**
 * **graphviz**
+* **librsvg2-bin**
 
 ### usage
 
