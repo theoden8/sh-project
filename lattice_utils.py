@@ -158,37 +158,13 @@ def node_color_func(label):
     return '#FFCCCC'
 
 
-# def filter_important_nodes(g, label):
-#     # fname = label
-#     is_small = 'small_graphs' in os.path.dirname(label)
-#     if not is_small and g.out_degree(label) == 1:
-#         return False
-#     #     return True
-#     # n = int(os.path.basename(label).split('_')[1])
-#     # if n <= 4:
-#     #     return True
-#     # with open(fname, 'r') as f:
-#     #     G = deserialize_graph(f.read())
-#         # if is_path(G) or is_complete(G):
-#         #     return True
-#     if g.in_degree(label) == 1 and g.out_degree(label) == 1:
-#         return False
-#     return True
-
-
-# def filter_important_nodes_neighborhood(g, nodelist, ndm):
-#     max_distance = 2
-#     for nd in nodelist:
-#         if not nx.has_path(g, ndm, nd):
-#             continue
-#         if nx.shortest_path_length(g, ndm, nd) <= max_distance:
-#             return True
-#     for nd in nodelist:
-#         if not nx.has_path(g, nd, ndm):
-#             continue
-#         if nx.shortest_path_length(g, nd, ndm) <= max_distance:
-#             return True
-#     return False
+def has_only_one_bidirectional_neighbor(g, label):
+    if g.in_degree(label) != 0 or g.out_degree(label) != 0:
+        return False
+    for nb in g.neighbors(nd):
+        if g.has_edge(nb, nd):
+            return False
+    return True
 
 
 def plot_lattice(g, filename, **kwargs):
@@ -204,7 +180,7 @@ def plot_lattice(g, filename, **kwargs):
     new_g = g
 
     if len(nodelist) > 100:
-        nodelist = [nd for nd in g.nodes() if g.in_degree(nd) != 1 or g.out_degree(nd) != 1]
+        nodelist = [nd for nd in g.nodes() if not has_only_one_bidirectional_neighbor(g, nd)]
         # nodelist = [nd for nd in g.nodes() if filter_important_nodes(g, nd)]
         # print('filtered significant nodes')
         # nodelist_neighborhood = [ndm for ndm in g.nodes()
@@ -221,7 +197,7 @@ def plot_lattice(g, filename, **kwargs):
         # print('reduced insignificant loops')
 
     no_nodes = len(nodelist_neighborhood)
-    fontsize = 9 - int(math.log(no_nodes, 5))
+    # fontsize = 9 - int(math.log(no_nodes, 5))
     # nodesize_min = 150 - 20 * int(math.log(no_nodes, 5))
     # nodesize_max = 700 - 100 * int(math.log(no_nodes, 5))
     # nodesize_step = 200 - 10 * int(math.log(no_nodes, 5))
@@ -232,7 +208,7 @@ def plot_lattice(g, filename, **kwargs):
                      # pos=nx.spring_layout(g, dim=2),
                      nodelist=nodelist_neighborhood,
                      labels={nd : label_rename(nd) for nd in nodelist},
-                     font_size=fontsize,
+                     font_size=9,
                      # font_family='arial',
                      font_weight='bold',
                      font_color='k',
@@ -280,7 +256,7 @@ def graph_color(fname):
         return green
     elif len(g.nodes()) <= 5:
         return cyan
-    return white
+    return black
 
 
 def plot_adjacency_matrix(g, filename):
@@ -308,10 +284,15 @@ def plot_adjacency_matrix(g, filename):
     svg_fname = filename.replace('.png', '.svg')
     with cairo.SVGSurface(svg_fname, size, size) as surface:
         ctx = cairo.Context(surface)
+
+        ctx.rectangle(0, 0, float(size), float(size))
+        ctx.set_source_rgba(1., 1., 1., 1.)
+        ctx.fill()
+
         n = len(g)
         rectsize = float(size) / n
         g_nodes = list(g.nodes())
-        color_priority = [gray, yellow, green, cyan, white]
+        color_priority = [gray, yellow, green, cyan, black]
         def sort_func(gfile):
             with open(gfile, 'r') as f:
                 g = deserialize_digraph(f.read())

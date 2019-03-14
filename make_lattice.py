@@ -28,4 +28,4 @@ if __name__ == '__main__':
             json.dump(serialize_lattice(lattice), f)
     if len(lattice.g.nodes()) > 0:
         plot_lattice(lattice.g, 'lattice.png')
-        # plot_adjacency_matrix(lattice.g, 'lattice_adj.png')
+        plot_adjacency_matrix(lattice.g, 'lattice_adj.png')
