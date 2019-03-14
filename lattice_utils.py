@@ -158,37 +158,37 @@ def node_color_func(label):
     return '#FFCCCC'
 
 
-def filter_important_nodes(g, label):
-    # fname = label
-    is_small = 'small_graphs' in os.path.dirname(label)
-    if not is_small and g.out_degree(label) == 1:
-        return False
-    #     return True
-    # n = int(os.path.basename(label).split('_')[1])
-    # if n <= 4:
-    #     return True
-    # with open(fname, 'r') as f:
-    #     G = deserialize_graph(f.read())
-        # if is_path(G) or is_complete(G):
-        #     return True
-    if g.in_degree(label) == 1 and g.out_degree(label) == 1:
-        return False
-    return True
+# def filter_important_nodes(g, label):
+#     # fname = label
+#     is_small = 'small_graphs' in os.path.dirname(label)
+#     if not is_small and g.out_degree(label) == 1:
+#         return False
+#     #     return True
+#     # n = int(os.path.basename(label).split('_')[1])
+#     # if n <= 4:
+#     #     return True
+#     # with open(fname, 'r') as f:
+#     #     G = deserialize_graph(f.read())
+#         # if is_path(G) or is_complete(G):
+#         #     return True
+#     if g.in_degree(label) == 1 and g.out_degree(label) == 1:
+#         return False
+#     return True
 
 
-def filter_important_nodes_neighborhood(g, nodelist, ndm):
-    max_distance = 2
-    for nd in nodelist:
-        if not nx.has_path(g, ndm, nd):
-            continue
-        if nx.shortest_path_length(g, ndm, nd) <= max_distance:
-            return True
-    for nd in nodelist:
-        if not nx.has_path(g, nd, ndm):
-            continue
-        if nx.shortest_path_length(g, nd, ndm) <= max_distance:
-            return True
-    return False
+# def filter_important_nodes_neighborhood(g, nodelist, ndm):
+#     max_distance = 2
+#     for nd in nodelist:
+#         if not nx.has_path(g, ndm, nd):
+#             continue
+#         if nx.shortest_path_length(g, ndm, nd) <= max_distance:
+#             return True
+#     for nd in nodelist:
+#         if not nx.has_path(g, nd, ndm):
+#             continue
+#         if nx.shortest_path_length(g, nd, ndm) <= max_distance:
+#             return True
+#     return False
 
 
 def plot_lattice(g, filename, **kwargs):
@@ -204,26 +204,27 @@ def plot_lattice(g, filename, **kwargs):
     new_g = g
 
     if len(nodelist) > 100:
-        nodelist = [nd for nd in g.nodes() if filter_important_nodes(g, nd)]
-        print('filtered significant nodes')
-        nodelist_neighborhood = [ndm for ndm in g.nodes()
-                                 if ndm in nodelist or (filter_important_nodes_neighborhood(g, nodelist, ndm)
-                                    and 'small_graphs' in ndm)]
+        nodelist = [nd for nd in g.nodes() if g.in_degree(nd) != 1 or g.out_degree(nd) != 1]
+        # nodelist = [nd for nd in g.nodes() if filter_important_nodes(g, nd)]
+        # print('filtered significant nodes')
+        # nodelist_neighborhood = [ndm for ndm in g.nodes()
+        #                          if ndm in nodelist or (filter_important_nodes_neighborhood(g, nodelist, ndm)
+        #                             and 'small_graphs' in ndm)]
 
-        new_g = g
-        for e in g.edges():
-            u, v = e
-            if v in nodelist_neighborhood:
-                continue
-            if new_g.has_edge(u, v):
-                new_g = nx.contracted_edge(new_g, e)
-        print('reduced insignificant loops')
+#         new_g = g
+#         for e in g.edges():
+#             u, v = e
+#             if v in nodelist_neighborhood:
+#                 continue
+#             if new_g.has_edge(u, v):
+#                 new_g = nx.contracted_edge(new_g, e)
+        # print('reduced insignificant loops')
 
     no_nodes = len(nodelist_neighborhood)
     fontsize = 9 - int(math.log(no_nodes, 5))
-    nodesize_min = 150 - 20 * int(math.log(no_nodes, 5))
-    nodesize_max = 700 - 100 * int(math.log(no_nodes, 5))
-    nodesize_step = 200 - 10 * int(math.log(no_nodes, 5))
+    # nodesize_min = 150 - 20 * int(math.log(no_nodes, 5))
+    # nodesize_max = 700 - 100 * int(math.log(no_nodes, 5))
+    # nodesize_step = 200 - 10 * int(math.log(no_nodes, 5))
     nx.draw_networkx(new_g,
                      arrows=True,
                      # pos=graphviz_layout(new_g),
@@ -238,8 +239,9 @@ def plot_lattice(g, filename, **kwargs):
                      alpha=1.,
                      node_color=[node_color_func(nd) for nd in nodelist_neighborhood],
                      # node_size=[500 for nd in nodelist_neighborhood],
-                     node_size=[(max(nodesize_min, nodesize_max - nodesize_step * (new_g.degree(nd) - 2)) if nd in nodelist else 30)
-                                for nd in nodelist_neighborhood],
+                     node_size = [(500 if nd in nodelist else 30) for nd in nodelist_neighborhood],
+                     # node_size=[(max(nodesize_min, nodesize_max - nodesize_step * (new_g.degree(nd) - 2)) if nd in nodelist else 30)
+                     #            for nd in nodelist_neighborhood],
                      edge_color=[('m' if g.has_edge(e[1], e[0]) else 'k') if g.has_edge(e[0], e[1]) else 'b' for e in new_g.edges()],
                      width=[(0.2 if g.has_edge(e[1], e[0]) else 0.4) if g.has_edge(e[0], e[1]) else 0.4 for e in new_g.edges()],
                      arrowstyle='-|>',

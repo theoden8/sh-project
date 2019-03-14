@@ -8,6 +8,7 @@
 *.json
 *.mp3
 *.mp4
+*.zip
 !/images/*.png
 gap_config.sh
 graphs
