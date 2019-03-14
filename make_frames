@@ -3,7 +3,7 @@
 maxthreads=4
 nothreads=0
 
-find frames -name 'frame_lattice_*.json' | sort -V | while IFS= read -r line; do
+find frames -name 'frame_lattice_*.json' | sort -R | while IFS= read -r line; do
     lframe="$line"
     pngname="${lframe/.json/.png}"
     framename="${pngname/lattice_/}"
@@ -12,6 +12,8 @@ find frames -name 'frame_lattice_*.json' | sort -V | while IFS= read -r line; do
             wait
             nothreads=0
         }
+        echo "frame ${framename}"
+        touch "${framename}"
         ./make_lattice_frame.py "${lframe}" &
         ((++nothreads))
     }
