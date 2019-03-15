@@ -10,15 +10,13 @@ from lattice_utils import *
 def sort_func(gfile):
     with open(gfile, 'r') as f:
         g = deserialize_graph(f.read())
-        return len(g.nodes()) * 10000 + len(g.edges())
+        return get_graph_size(gfile) * 10000 + len(g.edges())
 
 
 def get_all_lattice_nodes(lattice_fname):
     if not os.path.exists(lattice_fname):
         return None
-    lattice = None
-    with open(lattice_fname, 'r') as f:
-        lattice = deserialize_lattice(f.read())
+    lattice = Lattice.load(lattice_fname)
     nodes = list(lattice.g.nodes())
     nodes.sort(key=sort_func)
     return nodes
@@ -44,9 +42,7 @@ if __name__ == '__main__':
                 json.dump(serialize_lattice(lattice), f)
         # if it does, just play it
         else:
-            lattice = None
-            with open(frame_lattice_name, 'r') as f:
-                lattice = deserialize_lattice(f.read())
+            lattice = Lattice.load(frame_lattice_name)
         # if not os.path.exists(frame_name):
         #     print('making new frame', frame_name)
         #     plot_lattice(lattice.g, frame_name)

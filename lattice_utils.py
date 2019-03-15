@@ -11,10 +11,21 @@ from homomorphism_solver import *
 from lattice_utils import *
 
 
+def get_graph_size(gfile):
+    fname = os.path.basename(gfile)
+    return int(fname.split('_')[1])
+
+
 class Lattice:
-    def __init__(self, g, nonedges={}):
+    def __init__(self, g, nonedges={}, cores=[]):
         self.g = g
         self.nonedges = nonedges
+        self.cores = cores
+
+    @staticmethod
+    def load(filename):
+        with open(filename, 'r') as f:
+            return deserialize_lattice(f.read())
 
     def add_object(self, filename):
         nodename = filename
@@ -28,13 +39,69 @@ class Lattice:
             self.set_relation(nodename, other_graph)
             self.set_relation(other_graph, nodename)
 
+    def is_homomorphic(self, gfile, hfile):
+        if gfile in self.g.nodes() and hfile in self.g.nodes():
+            if nx.has_path(self.g, gfile, hfile):
+                return True
+            if not self.should_check(gfile, hfile):
+                return False
+        elif gfile in self.g.nodes() and hfile not in self.g.nodes():
+            nonedges = []
+            if gfile in self.nonedges:
+                nonedges = self.nonedges[gfile]
+            nonedges = [nd for nd in nonedges if get_graph_size(nd) <= get_graph_size(gfile)]
+            for nh in nonedges:
+                print('test %s -> %s' % (nh, hfile))
+                if self.find_homomorphism(nh, hfile) is not None:
+                    return False
+        elif gfile not in self.g.nodes() and hfile in self.g.nodes():
+            pass
+        print('test %s -> %s' % (gfile, hfile))
+        return self.find_homomorphism(gfile, hfile) is not None
+
+    def is_homomorphically_equivalent(self, gfile, hfile):
+        return self.is_homomorphic(gfile, hfile) and self.is_homomorphic(hfile, gfile)
+
+#     def is_core(self, gfile):
+#         if gfile in self.cores:
+#             return True
+#         G = None
+#         with open(gfile, 'r') as f:
+#             G = deserialize_graph(f.read())
+#             if is_complete(G) or is_cycle(G):
+#                 return True
+#         for hfile in nx.dfs_tree(self.g, gfile).nodes():
+#             # can't be larger
+#             if gfile == hfile or get_graph_size(hfile) > get_graph_size(gfile):
+#                 continue
+#             # must be homomorphically equivalent
+#             if not self.is_homomorphic(hfile, gfile):
+#                 continue
+#             # we don't care if it's not an edge-induced subgraph
+#             H = None
+#             with open(hfile, 'r') as f:
+#                 H = deserialize_graph(f.read())
+#             if not nx.isomorphism.GraphMatcher(nx.line_graph(G), nx.line_graph(H)).subgraph_is_isomorphic():
+#                 continue
+#             # must not be a core
+#             return self.is_core(hfile)
+#         return True
+
+    def find_homomorphism(self, gfile, hfile):
+        G, H = None, None
+        with open(gfile, 'r') as f:
+            G = deserialize_graph(f.read())
+        with open(hfile, 'r') as f:
+            H = deserialize_graph(f.read())
+        return is_homomorphic(G, H)
+
     def set_relation(self, gfile, hfile):
         if gfile == hfile:
             return
         if gfile not in self.nonedges:
             self.nonedges[gfile] = []
         if self.should_check(gfile, hfile):
-            result = self.is_homomorphic(gfile, hfile)
+            result = self.establish_homomorphism(gfile, hfile)
             if not result:
                 self.nonedges[gfile] += [hfile]
 
@@ -46,15 +113,11 @@ class Lattice:
                 return False
         return True
 
-    def is_homomorphic(self, gfile, hfile):
-        G, H = None, None
+    def establish_homomorphism(self, gfile, hfile):
         if nx.has_path(self.g, gfile, hfile):
             return True
-        with open(gfile, 'r') as f:
-            G = deserialize_graph(f.read())
-        with open(hfile, 'r') as f:
-            H = deserialize_graph(f.read())
-        phi = is_homomorphic(G, H)
+
+        phi = self.find_homomorphism(gfile, hfile)
         if phi is None:
             return False
         print('%s -> %s' % (gfile, hfile))
@@ -75,16 +138,16 @@ class Lattice:
 def serialize_lattice(lattice):
     j = serialize_graph(lattice.g)
     j['nonedges'] = lattice.nonedges
+    j['cores'] = lattice.cores
     return j
 
 
 def deserialize_lattice(s):
     j = json.loads(s)
-    nodes = j['nodes']
-    edges = j['edges']
-    g = deserialize_digraph(json.dumps({'nodes':nodes,'edges':edges}))
+    g = deserialize_digraph(json.dumps({'nodes':j['nodes'],'edges':j['edges']}))
     nonedges = j['nonedges']
-    return Lattice(g, nonedges)
+    cores = j['cores'] if 'cores' in j else []
+    return Lattice(g, nonedges, cores)
 
 
 def is_complete(g):
@@ -153,8 +216,10 @@ def node_color_func(label):
             return '#00AAAA'
         elif n == 6:
             return '#9999FF'
-        elif n >= 7:
+        elif n == 7:
             return '#FF99FF'
+        elif n >= 8:
+            return '#AA00AA'
     return '#FFCCCC'
 
 
@@ -296,7 +361,7 @@ def plot_adjacency_matrix(g, filename):
         def sort_func(gfile):
             with open(gfile, 'r') as f:
                 g = deserialize_digraph(f.read())
-            n = len(g.nodes())
+            n = get_graph_size(gfile)
             e = len(g.edges())
             return n * 10000 + e
         g_nodes.sort(key=sort_func)

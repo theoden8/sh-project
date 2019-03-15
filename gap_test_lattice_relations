@@ -1,7 +1,12 @@
 #!/bin/bash
 
 
-fname="lattice.json"
+fname=$1; shift
+[ -z "${fname}" ] && {
+    fname="lattice.json"
+}
+
+
 env python3 -c "
 from graph_utils import *
 from lattice_utils import *

@@ -68,7 +68,8 @@ def plot_graphs(Gs, ssizes, filename, **kwargs):
 
 
 def plot_graph(G, filename, **kwargs):
-    plot_graphs(Gs=[(G, str(G))],
+    title = kwargs['title'] if 'title' in kwargs else str(G)
+    plot_graphs(Gs=[(G, title)],
                 ssizes=(1, 1),
                 filename=filename,
                 **kwargs)

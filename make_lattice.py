@@ -14,8 +14,7 @@ if __name__ == '__main__':
     dbfile = './lattice.json'
     lattice = Lattice(nx.DiGraph())
     if os.path.exists(dbfile):
-        with open(dbfile, 'r') as f:
-            lattice = deserialize_lattice(f.read())
+        lattice = Lattice.load(dbfile)
     # g.remove_nodes_from([nd for nd in g.nodes() if 'small_graphs' not in nd])
     # print(list(g.nodes()))
 

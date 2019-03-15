@@ -1,13 +1,18 @@
 #!/bin/bash
 
-for gfile in graphs/*; do
-    for hfile in small_graphs/*; do
+for gfile in $(find graphs -name "*.json" | sort -R); do
+    for hfile in $(find small_graphs -name "*.json" | sort -R); do
         gap_res=$(./gap_is_homomorphic_gh "$gfile" "$hfile")
         sh_res=$(./solve_homomorphism.py "$gfile" "$hfile" | tail -1)
         [ "$sh_res" = fail ] && sh_res=NO || sh_res=YES
-        echo "$gfile $hfile $gap_res $sh_res"
+        lt_res=$(./solve_homomorphism_with_lattice.py "${gfile}" "${hfile}" | tail -1)
+        echo "$gfile $hfile $gap_res $sh_res $lt_res"
         [ "$gap_res" != "$sh_res" ] && {
-            echo "test failed"
+            echo "test failed for normal solver"
+            exit 1
+        }
+        [ "$gap_res" != "$lt_res" ] && {
+            echo "test failed for lattice solver"
             exit 1
         }
     done
