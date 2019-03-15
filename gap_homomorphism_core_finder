@@ -16,11 +16,19 @@ gfile=$1; shift
 
 for gsize in {2..7}; do
     to_break=0
-    for hfile in ./small_graphs/graph_${gsize}*; do
+    for hfile in $(find small_graphs -name "graph_${gsize}*" | sort -V); do
+        echo "trying $hfile"
         info=$(./gap_homomorphism_finder "$gfile" "$hfile")
-        echo "$info"
+        # echo "$info"
+        [ -z "$(echo "$info" | grep -v fail)" ] && {
+            continue
+        }
+        info=$(./gap_homomorphism_finder "$hfile" "$gfile")
+        # echo "$info"
         [ -z "$(echo "$info" | grep -v fail)" ] || {
             to_break=1
+            echo "found core of $gfile: $hfile"
+            break
         }
     done
     [ $to_break -eq 1 ] && break
