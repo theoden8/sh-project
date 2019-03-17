@@ -28,6 +28,7 @@ if __name__ == '__main__':
         echo "$gfile $hfile $sh_res $result"
         [ "$result" != "${sh_res}" ] && {
             >&2 echo "error: different results"
+	        exit 1
         }
     done
     

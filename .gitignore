@@ -5,10 +5,12 @@
 *.pkl
 *.so
 *.prof
+*.txt
 *.json
 *.mp3
 *.mp4
 *.zip
+.*.swp
 !/images/*.png
 gap_config.sh
 graphs

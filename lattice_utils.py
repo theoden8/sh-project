@@ -91,7 +91,14 @@ class LatticePathFinder:
     def is_known_non_homomorphism(self, a, b):
         a = self.get_equivalent_node(a)
         b = self.get_equivalent_node(b)
-        return a != b and self.core_graph_c.has_edge(a, b) and nx.has_path(self.core_graph_c, a, b)
+        if a == b:
+            return False
+        if self.core_graph_c.has_edge(a, b):
+            return True
+        for nh in self.core_graph_c.neighbors(a):
+            if self.is_known_homomorphism(b, nh):
+                return True
+        return False
 
     def is_known_relation(self, a, b):
         return self.is_known_homomorphism(a, b) or self.is_known_non_homomorphism(a, b)
@@ -181,10 +188,11 @@ class Lattice:
         self.g.add_node(nodename)
         self.path_finder.update_node_significance(nodename)
         self.cache.update()
-        for other_graph in self.path_finder.significant_nodes:
+        sorted_significant_nodes = sorted(self.path_finder.significant_nodes, key=lambda nd: self.g.degree(nd), reverse=True)
+        for other_graph in sorted_significant_nodes:
             if nodename == other_graph:
                 continue
-            #print('\t<?>', other_graph)
+            print('\t<?>', other_graph)
             self.establish_homomorphism(nodename, other_graph)
             self.establish_homomorphism(other_graph, nodename)
             # we found an equivalence to an existing node
@@ -268,7 +276,7 @@ class Lattice:
     def establish_homomorphism(self, gfile, hfile):
         if self.path_finder.is_known_relation(gfile, hfile):
             return self.path_finder.has_path(gfile, hfile)
-        
+
         if not self.path_finder.is_significant_node(gfile) or not self.path_finder.is_significant_node(hfile):
             return None
         assert self.path_finder.is_significant_node(hfile)
@@ -294,7 +302,7 @@ def serialize_lattice(lattice):
     j['nonedges'] = {
         u : [v for v in lattice.path_finder.core_graph_c.neighbors(u)]
             for u in lattice.path_finder.core_graph_c.nodes()
-                
+
     }
     j['cores'] = lattice.cores
     return j
@@ -413,6 +421,8 @@ def plot_lattice(lattice, filename, **kwargs):
         if len(nodelist_neighborhood) > 1000:
             nodelist_neighborhood = nodelist
         new_g = g.subgraph(nodelist_neighborhood)
+        if len(nodelist_neighborhood) == len(nodelist):
+            new_g = nx.transitive_reduction(new_g)
         # nodelist = [nd for nd in g.nodes() if filter_important_nodes(g, nd)]
         # print('filtered significant nodes')
         # nodelist_neighborhood = [ndm for ndm in g.nodes()
@@ -435,8 +445,8 @@ def plot_lattice(lattice, filename, **kwargs):
     # nodesize_step = 200 - 10 * int(math.log(no_nodes, 5))
     nx.draw_networkx(new_g,
                      arrows=True,
-                     # pos=graphviz_layout(new_g),
-                     pos=nx.kamada_kawai_layout(new_g, dim=2),
+                     pos=graphviz_layout(new_g),
+                     # pos=nx.kamada_kawai_layout(new_g, dim=2),
                      # pos=nx.spring_layout(g, dim=2),
                      nodelist=nodelist_neighborhood,
                      labels={nd : label_rename(nd) for nd in nodelist},
