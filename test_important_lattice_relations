@@ -6,6 +6,7 @@ fname=$1; shift
 }
 
 env python3 -c "
+from homomorphism_solver import *
 from lattice_utils import *
 
 if __name__ == '__main__':
@@ -18,18 +19,18 @@ if __name__ == '__main__':
             print(g)
             print(h)
             print('YES' if lattice.path_finder.has_path(g, h) else 'NO')
+            phi = is_homomorphic(lattice.cache.load(g), lattice.cache.load(h))
+            print('YES' if phi is not None else 'NO')
 " | {
     while IFS= read -r gfile; do
         read hfile
         read result
-        sh_res=$(./solve_homomorphism.py "${gfile}" "${hfile}" | tail -1)
-        [ -z "$(echo "$sh_res" | grep fail)" ] && sh_res=YES || sh_res=NO
+        read sh_res
 
         echo "$gfile $hfile $sh_res $result"
         [ "$result" != "${sh_res}" ] && {
             >&2 echo "error: different results"
-	        exit 1
+                exit 1
         }
     done
-    
 }

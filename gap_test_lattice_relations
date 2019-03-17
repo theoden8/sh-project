@@ -61,14 +61,14 @@ if __name__ == '__main__':
     lattice = None
     with open('${fname}', 'r') as f:
         lattice = deserialize_lattice(f.read())
-    if '$gfile' not in lattice.nonedges:
+    if lattice.path_finder.core_graph_c.out_degree('$gfile') == 0:
         print('\tno problems detected: $gfile does not have non-edges')
         sys.exit(0)
-    for nh in lattice.nonedges['$gfile']:
+    for nh in lattice.path_finder.core_graph_c.neighbors('$gfile'):
         if nh == '$hfile':
             print('\t$gfile is explicitly a non-edge to $hfile')
             sys.exit(0)
-        if nx.has_path(lattice.g, '$hfile', nh):
+        if lattice.path_finder.is_known_non_homomorphism('$hfile', nh):
             print('\terroneous nonedge $gfile -> %s, hence $hfile ignored' % nh)
             sys.exit(0)
     print('\tno problems detected in existing non-edges')

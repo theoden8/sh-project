@@ -4,6 +4,7 @@ import math
 from random import choice
 from random import randint
 from random import shuffle
+import matplotlib as mpl
 import matplotlib.pyplot as plt
 import networkx as nx
 
@@ -26,9 +27,17 @@ def plot_graphs(Gs, ssizes, filename, **kwargs):
     label_font_size = kwargs['label_font_size'] if 'label_font_size' in kwargs else 20
     node_size = kwargs['node_size'] if 'node_size' in kwargs else 1800
     label_rename_func = kwargs['label_func'] if 'label_func' in kwargs else str
+    facecolor = kwargs['facecolor'] if 'facecolor' in kwargs else 'w'
+    fig_alpha = kwargs['fig_alpha'] if 'fig_alpha' in kwargs else 1.
+    edge_width = kwargs['edge_width'] if 'edge_width' in kwargs else .3
+    edge_color = kwargs['edge_color'] if 'edge_color' in kwargs else 'k'
     nr, nc = ssizes
-    totalsize = float(24. / math.sqrt(nc * nr))
+    maxsize = kwargs['maxsize'] if 'maxsize' in kwargs else 24.
+    totalsize = float(float(maxsize) / math.sqrt(nc * nr))
     fig = plt.figure(1, figsize=(int(totalsize * nc), int(totalsize * nr)))
+    fig.patch.set_facecolor(facecolor)
+    mpl.rcParams['savefig.facecolor'] = facecolor
+    fig.patch.set_alpha(fig_alpha)
     plt.clf()
     splts = fig.subplots(nrows=nr, ncols=nc)
     if nr == 1:
@@ -44,7 +53,7 @@ def plot_graphs(Gs, ssizes, filename, **kwargs):
             nx.draw_networkx_labels(G, pos,
                                     labels={i : label_rename_func(i) for i in list(G.nodes)},
                                     font_size=label_font_size,
-                                    font_family='arial-black',
+                                    #font_family='arial-black',
                                     font_weight='bold',
                                     font_color='w',
                                     alpha=1.,
@@ -54,7 +63,8 @@ def plot_graphs(Gs, ssizes, filename, **kwargs):
                                node_size=node_size,
                                ax=ax)
         nx.draw_networkx_edges(G, pos,
-                               width=[0.3 for (u, v, d) in G.edges(data=True)],
+                               edge_color=edge_color,
+                               width=[edge_width for (u, v, d) in G.edges(data=True)],
                                arrowstyle='-|>',
                                arrowsize=12,
                                ax=ax,)

@@ -1,6 +1,7 @@
 import os
 import sys
 import subprocess
+import pathlib
 import math
 
 from networkx.drawing.nx_agraph import graphviz_layout
@@ -399,6 +400,145 @@ def filter_nodes_neighborhood(g, nodelist, label):
     if N < 8 or N >= 10:
         return True
     return label in nodelist
+
+
+def export_graph(lattice, filename):
+    g = lattice.path_finder.core_graph
+    g = nx.transitive_reduction(g)
+    with open(filename, 'w') as f:
+        vivagraphjs = 'vivagraph.js'
+        if not os.path.exists(vivagraphjs):
+            subprocess.check_call(['wget', 'https://raw.githubusercontent.com/anvaka/VivaGraphJS/master/dist/vivagraph.js', '-qO', vivagraphjs])
+        vivagraph_uri = pathlib.Path(os.path.abspath(vivagraphjs)).as_uri()
+        f.write("""
+36 lines (29 sloc) 1003 Bytes
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Graph Homomorphisms</title>
+    <script type="text/javascript" src="%s"></script>
+    <script type="text/javascript">
+        function main () {
+            var graph = Viva.Graph.graph();\n""" % vivagraph_uri)
+        for nd in g.nodes():
+            imgname = 'graph_images/' + os.path.basename(nd).replace('.json', '.png')
+            if not os.path.exists(imgname):
+                plot_graph(load_graph(nd), imgname,
+                           title=label_rename(nd),
+                           maxsize=8,
+                           node_size=10000,
+                           colors=[node_color_func(nd)],
+                           edge_width=20.,
+                           edge_color='w',
+                           facecolor=node_color_func(nd),
+                           fig_alpha=0.2)
+                print('plot graph', nd)
+            abs_imgname = os.path.abspath(imgname)
+            imgname_uri = pathlib.Path(abs_imgname).as_uri()
+            f.write("            graph.addNode('%s', {url : '%s'})\n" % (nd, imgname_uri))
+        f.write('\n')
+        for (u, v) in g.edges():
+            f.write("            graph.addLink('%s', '%s')\n" % (u, v))
+        f.write("""
+            var graphics = Viva.Graph.View.svgGraphics(),
+                nodeSize = 24;
+            graphics.node(function(node) {
+                return Viva.Graph.svg('image')
+                     .attr('width', nodeSize)
+                     .attr('height', nodeSize)
+                     .link(node.data.url);
+            }).placeNode(function(nodeUI, pos) {
+                nodeUI.attr('x', pos.x - nodeSize / 2).attr('y', pos.y - nodeSize / 2);
+            });
+            // To render an arrow we have to address two problems:
+            //  1. Links should start/stop at node's bounding box, not at the node center.
+            //  2. Render an arrow shape at the end of the link.
+            // Rendering arrow shape is achieved by using SVG markers, part of the SVG
+            // standard: http://www.w3.org/TR/SVG/painting.html#Markers
+            var createMarker = function(id) {
+                    return Viva.Graph.svg('marker')
+                               .attr('id', id)
+                               .attr('viewBox', "0 0 10 10")
+                               .attr('refX', "10")
+                               .attr('refY', "5")
+                               .attr('markerUnits', "strokeWidth")
+                               .attr('markerWidth', "10")
+                               .attr('markerHeight', "5")
+                               .attr('orient', "auto");
+                },
+                marker = createMarker('Triangle');
+            marker.append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z');
+            // Marker should be defined only once in <defs> child element of root <svg> element:
+            var defs = graphics.getSvgRoot().append('defs');
+            defs.append(marker);
+            var geom = Viva.Graph.geom();
+            graphics.link(function(link){
+                // Notice the Triangle marker-end attribe:
+                return Viva.Graph.svg('path')
+                           .attr('stroke', 'gray')
+                           .attr('background-color', 'white')
+                           .attr('marker-end', 'url(#Triangle)');
+            }).placeLink(function(linkUI, fromPos, toPos) {
+                // Here we should take care about
+                //  "Links should start/stop at node's bounding box, not at the node center."
+                // For rectangular nodes Viva.Graph.geom() provides efficient way to find
+                // an intersection point between segment and rectangle
+                var toNodeSize = nodeSize,
+                    fromNodeSize = nodeSize;
+                var from = geom.intersectRect(
+                        // rectangle:
+                                fromPos.x - fromNodeSize / 2, // left
+                                fromPos.y - fromNodeSize / 2, // top
+                                fromPos.x + fromNodeSize / 2, // right
+                                fromPos.y + fromNodeSize / 2, // bottom
+                        // segment:
+                                fromPos.x, fromPos.y, toPos.x, toPos.y)
+                           || fromPos; // if no intersection found - return center of the node
+                var to = geom.intersectRect(
+                        // rectangle:
+                                toPos.x - toNodeSize / 2, // left
+                                toPos.y - toNodeSize / 2, // top
+                                toPos.x + toNodeSize / 2, // right
+                                toPos.y + toNodeSize / 2, // bottom
+                        // segment:
+                                toPos.x, toPos.y, fromPos.x, fromPos.y)
+                            || toPos; // if no intersection found - return center of the node
+                var data = 'M' + from.x + ',' + from.y +
+                           'L' + to.x + ',' + to.y;
+                linkUI.attr("d", data);
+            });
+
+            var renderer = Viva.Graph.View.renderer(graph, {
+                graphics : graphics
+            });
+            renderer.run();
+        }
+        </script>
+
+    <style type="text/css" media="screen">html, body, svg { width: 100%; height: 100%; }</style>
+</head>
+<body onload='main()' bgcolor='#555566'></body>
+</html>
+        """)
+    # data = {}
+    # data['nodes'] = []
+    # pos = graphviz_layout(g)
+    # for nd in g.nodes():
+    #     data['nodes'] += [{
+    #         'id': nd,
+    #         'label': label_rename(nd),
+    #         'x': pos[nd][0],
+    #         'y': pos[nd][0],
+    #         'size': 3
+    #     }]
+    # data['edges'] = []
+    # for (u, v) in g.edges():
+    #     data['edges'] += [{
+    #         "id": str((u, v)),
+    #         "source": u,
+    #         "target": v
+    #     }]
+    print('exported graph to', filename)
 
 
 def plot_lattice(lattice, filename, **kwargs):
