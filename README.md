@@ -38,7 +38,9 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 * gap_is_homomorphic_gh: uses GAP solver to print "YES" or "NO" if two graphs are homomorphic
 
-* gap_test_lattice_relations: uses GAP solver to verify that lattice relations are correct
+* gap_test_lattice_relations: uses local solver to verify that some randomly chosen relations are correct, and might use GAP solver to provide diagnostics
+
+* test_important_lattice_relations: fully verifies that all important nodes are connected correctly
 
   ---
 
@@ -121,6 +123,8 @@ time ./solve_homomorphism.py <gfile> <hfile>
 ./make_lattice.py small_graphs/graph_{1,2,3,4,5}_*.json
 # verify relations
 ./gap_test_lattice_relations
+# verify the most important relations
+./test_important_lattice_relations
 ```
 
 ##### animation
