@@ -14,5 +14,5 @@ if __name__ == '__main__':
         with open(lattice_frame, 'r') as f:
             lattice = deserialize_lattice(f.read())
         frame_name = lattice_frame.replace('lattice_', '').replace('.json', '.png')
-        plot_lattice(lattice.g, frame_name)
+        plot_lattice(lattice, frame_name)
         print('generated frame', frame_name)

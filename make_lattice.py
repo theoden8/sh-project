@@ -26,5 +26,5 @@ if __name__ == '__main__':
         with open(dbfile, 'w') as f:
             json.dump(serialize_lattice(lattice), f)
     if len(lattice.g.nodes()) > 0:
-        plot_lattice(lattice.g, 'lattice.png')
+        plot_lattice(lattice, 'lattice.png')
         plot_adjacency_matrix(lattice.g, 'lattice_adj.png')

@@ -143,6 +143,7 @@ def serialize_graph(g):
         'edges': list(g.edges())
     }
 
+
 def deserialize_graph(s):
     s = json.loads(s)
     nodes = s['nodes']
@@ -150,6 +151,12 @@ def deserialize_graph(s):
     g = nx.Graph()
     g.add_edges_from(edges)
     return g
+
+
+def load_graph(fname):
+    with open(fname, 'r') as f:
+        return deserialize_graph(f.read())
+
 
 def deserialize_digraph(s):
     s = json.loads(s)

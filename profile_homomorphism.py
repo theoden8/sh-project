@@ -17,11 +17,7 @@ from homomorphism_solver import *
 
 if __name__ == '__main__':
     gfile, hfile = sys.argv[1], sys.argv[2]
-    G, H = None, None
-    with open(gfile, 'r') as f:
-        G = deserialize_graph(f.read())
-    with open(hfile, 'r') as f:
-        H = deserialize_graph(f.read())
+    G, H = load_graph(gfile), load_graph(hfile)
     phi = None
     with PyCallGraph(output=GraphvizOutput()):
         phi = is_homomorphic(G, H)

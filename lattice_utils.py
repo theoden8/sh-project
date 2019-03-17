@@ -16,11 +16,154 @@ def get_graph_size(gfile):
     return int(fname.split('_')[1])
 
 
+class LatticePathFinder:
+    def __init__(self, lattice, nonedges):
+        self.lattice = lattice
+        self.significant_nodes = [nd for nd in self.lattice.g.nodes() if self.check_node_significance(nd)]
+        self.core_graph = None
+        self.core_graph_c = None
+        self.update_core_graph(nonedges)
+
+    def update_core_graph(self, nonedges):
+        subgraph = self.lattice.g.subgraph(self.significant_nodes)
+
+        self.core_graph = nx.DiGraph(subgraph.edges())
+        self.core_graph.add_nodes_from(self.significant_nodes)
+
+        self.core_graph_c = nx.DiGraph()
+        self.core_graph_c.add_nodes_from(self.significant_nodes)
+        for a in nonedges:
+            a = self.get_equivalent_node(a)
+            for b in nonedges[a]:
+                b = self.get_equivalent_node(b)
+                if not self.is_known_non_homomorphism(a, b):
+                    self.core_graph_c.add_edge(a, b)
+
+    def update_node_significance(self, nd):
+        should_contain = self.check_node_significance(nd)
+        if should_contain and not self.is_significant_node(nd):
+            self.significant_nodes += [nd]
+
+            self.core_graph.add_node(nd)
+            for candidate in self.significant_nodes:
+                if self.lattice.g.has_edge(candidate, nd):
+                    self.core_graph.add_edge(candidate, nd)
+                if self.lattice.g.has_edge(nd, candidate):
+                    self.core_graph.add_edge(nd, candidate)
+            self.core_graph_c.add_node(nd)
+        elif not should_contain and self.is_significant_node(nd):
+            index = self.significant_nodes.index(nd)
+            del self.significant_nodes[index]
+            self.core_graph.remove_node(nd)
+            self.core_graph_c.remove_node(nd)
+
+    def get_equivalent_node(self, nd):
+        g = self.lattice.g
+        if self.is_significant_node(nd):
+            return nd
+        for nb in g.neighbors(nd):
+            if self.is_significant_node(nb):
+                return nb
+        return nd
+
+    def is_significant_node(self, nd):
+        return nd in self.significant_nodes
+
+    def check_node_significance(self, nd):
+        g = self.lattice.g
+        if g.in_degree(nd) == 0 or g.out_degree(nd) == 0:
+            return True
+        for nb in g.neighbors(nd):
+            if nb not in g.predecessors(nd):
+                return True
+        for nb in g.predecessors(nd):
+            if nb not in g.neighbors(nd):
+                return True
+        if get_graph_size(nd) == 2:
+            return True
+        return False
+
+    def is_known_homomorphism(self, a, b):
+        a = self.get_equivalent_node(a)
+        b = self.get_equivalent_node(b)
+        return a == b or self.core_graph.has_edge(a, b) or nx.has_path(self.core_graph, a, b)
+
+    def is_known_non_homomorphism(self, a, b):
+        a = self.get_equivalent_node(a)
+        b = self.get_equivalent_node(b)
+        return a != b and self.core_graph_c.has_edge(a, b) and nx.has_path(self.core_graph_c, a, b)
+
+    def is_known_relation(self, a, b):
+        return self.is_known_homomorphism(a, b) or self.is_known_non_homomorphism(a, b)
+
+    def memoize_relation(self, a, b, relation):
+        if self.is_known_relation(a, b):
+            return
+        a = self.get_equivalent_node(a)
+        b = self.get_equivalent_node(b)
+        #print('memoized', a, b, relation)
+        if relation:
+            self.core_graph.add_edge(a, b)
+        else:
+            self.core_graph_c.add_edge(a, b)
+
+    def normalize_memoization(self, a):
+        if self.is_significant_node(a):
+            return
+        #print('normalizing', a)
+        equiv = self.get_equivalent_node(a)
+        if a == equiv:
+            return
+        if a in self.core_graph.nodes():
+            self.core_graph.remove_node(a)
+            self.core_graph_c.remove_node(a)
+
+    def has_path(self, a, b):
+        # replace nodes with their equivalents
+        if self.is_known_homomorphism(a, b):
+            return True
+        elif self.is_known_non_homomorphism(a, b):
+            return False
+        a = self.get_equivalent_node(a)
+        b = self.get_equivalent_node(b)
+        return nx.has_path(self.core_graph, a, b)
+
+    def can_remove_edge(self, a, b):
+        #print('trying to remove edge', a, b)
+        if self.lattice.g.out_degree(a) == 1 or self.lattice.g.in_degree(b) == 1:
+            return False
+        for path in nx.all_simple_paths(self.core_graph, a, b):
+            if len(path) > 2:
+                #print('succeeded removing edge')
+                return True
+        return False
+
+
+class LatticeGraphCache:
+    def __init__(self, lattice):
+        self.lattice = lattice
+        self.cache = {}
+
+    def update(self):
+        for fname in list(self.cache.keys()):
+            if fname not in self.lattice.path_finder.significant_nodes:
+                del self.cache[fname]
+        for fname in self.lattice.path_finder.significant_nodes:
+            if fname not in self.cache:
+                self.cache[fname] = self.load(fname)
+
+    def load(self, fname):
+        if fname in self.cache:
+            return self.cache[fname]
+        return load_graph(fname)
+
+
 class Lattice:
     def __init__(self, g, nonedges={}, cores=[]):
         self.g = g
-        self.nonedges = nonedges
         self.cores = cores
+        self.path_finder = LatticePathFinder(self, nonedges)
+        self.cache = LatticeGraphCache(self)
 
     @staticmethod
     def load(filename):
@@ -29,47 +172,66 @@ class Lattice:
 
     def add_object(self, filename):
         nodename = filename
+        #print()
         print('adding object', nodename)
         nodes = list(self.g.nodes())
         if nodename in nodes:
             print('already exists', nodename)
             return
         self.g.add_node(nodename)
-        for other_graph in nodes:
-            self.set_relation(nodename, other_graph)
-            self.set_relation(other_graph, nodename)
+        self.path_finder.update_node_significance(nodename)
+        self.cache.update()
+        for other_graph in self.path_finder.significant_nodes:
+            if nodename == other_graph:
+                continue
+            #print('\t<?>', other_graph)
+            self.establish_homomorphism(nodename, other_graph)
+            self.establish_homomorphism(other_graph, nodename)
+            # we found an equivalence to an existing node
+            if self.g.has_edge(nodename, other_graph) and self.g.has_edge(other_graph, nodename):
+                for nb in list(self.g.neighbors(nodename)):
+                    if nb == other_graph:
+                        continue
+                    self.g.remove_edge(nodename, nb)
+                for nb in list(self.g.predecessors(nodename)):
+                    if nb == other_graph:
+                        continue
+                    self.g.remove_edge(nb, nodename)
+                self.path_finder.update_node_significance(nodename)
+                self.path_finder.normalize_memoization(nodename)
+                break
 
     def is_homomorphic(self, gfile, hfile):
-        if gfile in self.g.nodes() and hfile in self.g.nodes():
-            if nx.has_path(self.g, gfile, hfile):
-                return True
-            if not self.should_check(gfile, hfile):
-                return False
-        elif gfile in self.g.nodes() and hfile not in self.g.nodes():
+        if gfile == hfile:
+            return True
+        g_known, h_known = gfile in self.g.nodes(), hfile in self.g.nodes()
+        if g_known and h_known:
+            if self.path_finder.is_known_relation(gfile, hfile):
+                return self.path_finder.has_path(gfile, hfile)
+        elif g_known and not h_known:
             nonedges = []
-            if gfile in self.nonedges:
-                nonedges = self.nonedges[gfile]
+            equiv = self.path_finder.get_equivalent_node(equiv)
+            if equiv in self.core_graph_c.nodes():
+                nonedges = list(self.path_finder.core_graph_c.neighbors(equiv))
             nonedges = [nd for nd in nonedges if get_graph_size(nd) <= get_graph_size(gfile)]
             for nh in nonedges:
                 print('test %s -> %s' % (nh, hfile))
                 if self.find_homomorphism(nh, hfile) is not None:
                     return False
-        elif gfile not in self.g.nodes() and hfile in self.g.nodes():
+        elif not g_known and h_known:
             pass
         print('test %s -> %s' % (gfile, hfile))
         return self.find_homomorphism(gfile, hfile) is not None
 
-    def is_homomorphically_equivalent(self, gfile, hfile):
+    def is_homomorphic_eq(self, gfile, hfile):
         return self.is_homomorphic(gfile, hfile) and self.is_homomorphic(hfile, gfile)
 
 #     def is_core(self, gfile):
 #         if gfile in self.cores:
 #             return True
-#         G = None
-#         with open(gfile, 'r') as f:
-#             G = deserialize_graph(f.read())
-#             if is_complete(G) or is_cycle(G):
-#                 return True
+#         G = load_graph(gfile)
+        # if is_complete(G) or is_cycle(G):
+        #     return True
 #         for hfile in nx.dfs_tree(self.g, gfile).nodes():
 #             # can't be larger
 #             if gfile == hfile or get_graph_size(hfile) > get_graph_size(gfile):
@@ -78,9 +240,7 @@ class Lattice:
 #             if not self.is_homomorphic(hfile, gfile):
 #                 continue
 #             # we don't care if it's not an edge-induced subgraph
-#             H = None
-#             with open(hfile, 'r') as f:
-#                 H = deserialize_graph(f.read())
+#             H = load_graph(hfile)
 #             if not nx.isomorphism.GraphMatcher(nx.line_graph(G), nx.line_graph(H)).subgraph_is_isomorphic():
 #                 continue
 #             # must not be a core
@@ -88,56 +248,54 @@ class Lattice:
 #         return True
 
     def find_homomorphism(self, gfile, hfile):
-        G, H = None, None
-        with open(gfile, 'r') as f:
-            G = deserialize_graph(f.read())
-        with open(hfile, 'r') as f:
-            H = deserialize_graph(f.read())
+        G, H = self.cache.load(gfile), self.cache.load(hfile)
         return is_homomorphic(G, H)
 
-    def set_relation(self, gfile, hfile):
-        if gfile == hfile:
-            return
-        if gfile not in self.nonedges:
-            self.nonedges[gfile] = []
-        if self.should_check(gfile, hfile):
-            result = self.establish_homomorphism(gfile, hfile)
-            if not result:
-                self.nonedges[gfile] += [hfile]
+    def add_edge(self, gfile, hfile):
+        #print('add edge', gfile, hfile)
+        self.g.add_edge(gfile, hfile)
+        if self.g.has_edge(hfile, gfile):
+            self.path_finder.update_node_significance(gfile)
+            self.path_finder.update_node_significance(hfile)
 
-    def should_check(self, gfile, hfile):
-        if gfile not in self.nonedges:
-            return True
-        for nh in self.nonedges[gfile]:
-            if nx.has_path(self.g, hfile, nh):
-                return False
-        return True
+    def remove_edge(self, gfile, hfile):
+        if self.path_finder.can_remove_edge(gfile, hfile):
+            self.g.remove_edge(gfile, hfile)
+            self.path_finder.update_node_significance(gfile)
+            self.path_finder.update_node_significance(hfile)
+            #print('\t%s /-> %s' % (gfile, out))
 
     def establish_homomorphism(self, gfile, hfile):
-        if nx.has_path(self.g, gfile, hfile):
-            return True
+        if self.path_finder.is_known_relation(gfile, hfile):
+            return self.path_finder.has_path(gfile, hfile)
+        
+        if not self.path_finder.is_significant_node(gfile) or not self.path_finder.is_significant_node(hfile):
+            return None
+        assert self.path_finder.is_significant_node(hfile)
+        #print('establish homomorphism', gfile, hfile)
 
         phi = self.find_homomorphism(gfile, hfile)
         if phi is None:
+            self.path_finder.memoize_relation(gfile, hfile, False)
             return False
-        print('%s -> %s' % (gfile, hfile))
-        reach_nodes = [nd for nd in nx.dfs_tree(self.g, hfile).nodes()
-                       if nd != hfile and nx.has_path(self.g, hfile, nd)]
-        self.g.add_edge(gfile, hfile)
+        reach_nodes = [nd for nd in nx.dfs_tree(self.path_finder.core_graph, hfile).nodes()
+                       if nd != hfile and self.path_finder.has_path(hfile, nd)]
+        self.add_edge(gfile, hfile)
+        #print('%s -> %s' % (gfile, hfile))
         for out in reach_nodes:
             if self.g.has_edge(gfile, out):
-                self.g.remove_edge(gfile, out)
-                if not nx.has_path(self.g, hfile, out):
-                    self.g.add_edge(gfile, out)
-                if not self.g.has_edge(gfile, out):
-                    print('\t%s /-> %s' % (gfile, out))
-            assert nx.has_path(self.g, gfile, out)
+                self.remove_edge(gfile, out)
+        self.path_finder.memoize_relation(gfile, hfile, True)
         return True
 
 
 def serialize_lattice(lattice):
     j = serialize_graph(lattice.g)
-    j['nonedges'] = lattice.nonedges
+    j['nonedges'] = {
+        u : [v for v in lattice.path_finder.core_graph_c.neighbors(u)]
+            for u in lattice.path_finder.core_graph_c.nodes()
+                
+    }
     j['cores'] = lattice.cores
     return j
 
@@ -186,9 +344,7 @@ def label_rename(label):
     n, id = label.split('_')
     n, id = int(n), int(id)
     if is_small:
-        g = None
-        with open(fname, 'r') as f:
-            g = deserialize_graph(f.read())
+        g = load_graph(fname)
         if is_path(g):
             return '$P_%s$' % n
         elif is_cycle(g):
@@ -203,9 +359,7 @@ def node_color_func(label):
     is_small = 'small_graphs' in os.path.dirname(label)
     if is_small:
         n = int(os.path.basename(label).split('_')[1])
-        g = None
-        with open(fname, 'r') as f:
-            g = deserialize_graph(f.read())
+        g = load_graph(fname)
         if is_path(g):
             return '#CCCCCC'
         elif is_cycle(g):
@@ -232,20 +386,33 @@ def filter_significant_nodes(g, label):
     return True
 
 
-def plot_lattice(g, filename, **kwargs):
+def filter_nodes_neighborhood(g, nodelist, label):
+    N = get_graph_size(label)
+    if N < 8 or N >= 10:
+        return True
+    return label in nodelist
+
+
+def plot_lattice(lattice, filename, **kwargs):
     plt.figure(figsize=(16, 16))
     plt.suptitle('lattice',
                  size=35,
                  family='monospace',
                  weight='bold')
 
+    g = lattice.g
     ax = plt.subplot(111)
     nodelist = list(g.nodes())
     nodelist_neighborhood = nodelist
     new_g = g
 
     if len(nodelist) > 100:
-        nodelist = [nd for nd in g.nodes() if filter_significant_nodes(g, nd)]
+        #nodelist = [nd for nd in g.nodes() if filter_significant_nodes(g, nd)]
+        nodelist = lattice.path_finder.significant_nodes
+        nodelist_neighborhood = [nd for nd in g.nodes() if filter_nodes_neighborhood(g, nodelist, nd)]
+        if len(nodelist_neighborhood) > 1000:
+            nodelist_neighborhood = nodelist
+        new_g = g.subgraph(nodelist_neighborhood)
         # nodelist = [nd for nd in g.nodes() if filter_important_nodes(g, nd)]
         # print('filtered significant nodes')
         # nodelist_neighborhood = [ndm for ndm in g.nodes()
@@ -310,9 +477,7 @@ def graph_color(fname):
     black = (0, 0, 0)
     gray = (.5, .5, .5)
     white = (1, 1, 1)
-    g = None
-    with open(fname, 'r') as f:
-        g = deserialize_graph(f.read())
+    g = load_graph(fname)
     if is_path(g):
         return gray
     elif is_cycle(g):

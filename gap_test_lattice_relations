@@ -31,9 +31,10 @@ if __name__ == '__main__':
 " | while IFS= read -r gfile; do
     read hfile
     read result
-    gap_res=$(./gap_is_homomorphic_gh "$gfile" "$hfile")
-    echo "$gfile $hfile $gap_res $result"
-    [ "$result" != "${gap_res}" ] && {
+    sh_res=$(./solve_homomorphism.py "${gfile}" "${hfile}" | tail -1)
+    [ -z "$(echo "$sh_res" | grep fail)" ] && sh_res=YES || sh_res=NO
+    echo "$gfile $hfile $sh_res $result"
+    [ "$result" != "${sh_res}" ] && {
         >&2 echo "error: different results"
         [ "$result" = YES ] && {
             >&2 env python3 -c "
@@ -46,7 +47,7 @@ if __name__ == '__main__':
     print('erroneous path:', list(nx.shortest_path(lattice.g, '$gfile', '$hfile')))
 "
         } || {
-            sh_res=$(./solve_homomorphism.py "$gfile" "$hfile" | tail -1)
+            gap_res=$(./gap_is_homomorphic_gh "$gfile" "$hfile")
             [ -z "$(echo "$line" | grep fail)" ] && sh_res="YES" || sh_res="NO"
 
             [ "$sh_res" = "$gap_res" ] && {

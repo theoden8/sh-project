@@ -1,0 +1,34 @@
+#!/bin/bash
+
+fname=$1; shift
+[ -z "$fname" ] && {
+    fname="lattice.json"
+}
+
+env python3 -c "
+from lattice_utils import *
+
+if __name__ == '__main__':
+    lattice = Lattice.load('$fname')
+    significant_nodes = lattice.path_finder.significant_nodes
+    for g in significant_nodes:
+        for h in significant_nodes:
+            if g == h: 
+                continue
+            print(g)
+            print(h)
+            print('YES' if lattice.path_finder.has_path(g, h) else 'NO')
+" | {
+    while IFS= read -r gfile; do
+        read hfile
+        read result
+        sh_res=$(./solve_homomorphism.py "${gfile}" "${hfile}" | tail -1)
+        [ -z "$(echo "$sh_res" | grep fail)" ] && sh_res=YES || sh_res=NO
+
+        echo "$gfile $hfile $sh_res $result"
+        [ "$result" != "${sh_res}" ] && {
+            >&2 echo "error: different results"
+        }
+    done
+    
+}

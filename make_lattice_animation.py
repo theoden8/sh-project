@@ -45,5 +45,5 @@ if __name__ == '__main__':
             lattice = Lattice.load(frame_lattice_name)
         # if not os.path.exists(frame_name):
         #     print('making new frame', frame_name)
-        #     plot_lattice(lattice.g, frame_name)
+        #     plot_lattice(lattice, frame_name)
         i += 1
