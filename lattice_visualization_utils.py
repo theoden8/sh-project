@@ -90,31 +90,31 @@ def get_file_url(filename):
     return pathlib.Path(abs_fname).as_uri()
 
 
-def is_interesting_node(lattice, nd):
-    if not lattice.path_finder.is_significant_node(nd):
-        return False
-    for nb in lattice.g.neighbors(nd):
-        if nb not in lattice.path_finder.core_graph.nodes():
-            return True
-    return False
-
-
-def contracted_node(g, nd):
-    preds = list(g.predecessors(nd))
-    succs = list(g.neighbors(nd))
-    for p in preds:
-        for s in succs:
-            g.add_edge(p, s)
-    g.remove_node(nd)
-    return g
+# def is_interesting_node(lattice, nd):
+#     if not lattice.path_finder.is_significant_node(nd):
+#         return False
+#     for nb in lattice.g.neighbors(nd):
+#         if nb not in lattice.path_finder.core_graph.nodes():
+#             return True
+#     return False
+# 
+# 
+# def contracted_node(g, nd):
+#     preds = list(g.predecessors(nd))
+#     succs = list(g.neighbors(nd))
+#     for p in preds:
+#         for s in succs:
+#             g.add_edge(p, s)
+#     g.remove_node(nd)
+#     return g
 
 
 def export_to_vivagraphjs(lattice, filename):
     g = lattice.path_finder.core_graph
-    g = nx.transitive_reduction(g)
-    for nd in list(g.nodes()):
-        if not is_interesting_node(lattice, nd):
-            g = contracted_node(g, nd)
+    # g = nx.transitive_reduction(g)
+    # for nd in list(g.nodes()):
+    #     if not is_interesting_node(lattice, nd):
+    #         g = contracted_node(g, nd)
     g = nx.transitive_reduction(g)
     with open(filename, 'w') as f:
         vivagraphjs = 'vivagraph.js'
@@ -130,11 +130,17 @@ def export_to_vivagraphjs(lattice, filename):
     <script type="text/javascript">
         function main () {
             var graph = Viva.Graph.graph();\n""" % vivagraph_uri)
+        total = max([lattice.g.degree(nd) for nd in g.nodes()])
+        if os.path.exists('graph_images'):
+            for fname in os.listdir('graph_images/'):
+                os.remove('graph_images/' + fname)
+                print('removed file graph_images/%s' % fname)
+        else:
+            os.mkdir('graph_images')
         for nd in g.nodes():
-            total = float(len(lattice.g.edges()))
             degree = float(lattice.g.degree(nd))
             importance = (degree / total) ** .3
-            imgname = plot_node(lattice, nd, alpha=0.1 + (0.9 * importance))
+            imgname = plot_node(lattice, nd, alpha=0.05 + (0.6 * importance))
             f.write("            graph.addNode('%s', {url : '%s'})\n" % (nd, get_file_url(imgname)))
         f.write('\n')
         for (u, v) in g.edges():
@@ -226,6 +232,9 @@ def export_to_d3(lattice, filename):
     g = lattice.g
     with open(filename, 'w') as f:
         json.dump(serialize_graph(g), f)
+    with open('lattice_d3_template.html', 'r') as fr:
+        with open('lattice_d3.html', 'w') as fw:
+            fw.write(fr.read().replace('lattice_graph_d3.json', os.path.abspath(filename)))
     print('exported graph as d3 to', filename)
 
 
