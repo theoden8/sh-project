@@ -79,10 +79,10 @@ class LatticePathFinder:
         if g.in_degree(nd) == 0 or g.out_degree(nd) == 0:
             return True
         for nb in g.neighbors(nd):
-            if nb not in g.predecessors(nd):
+            if not g.has_edge(nb, nd):
                 return True
         for nb in g.predecessors(nd):
-            if nb not in g.neighbors(nd):
+            if not g.has_edge(nd, nb):
                 return True
         if get_graph_size(nd) == 2:
             return True
@@ -144,11 +144,15 @@ class LatticePathFinder:
         #print('trying to remove edge', a, b)
         if self.lattice.g.out_degree(a) == 1 or self.lattice.g.in_degree(b) == 1:
             return False
-        for path in nx.all_simple_paths(self.core_graph, a, b):
-            if len(path) > 2:
-                #print('succeeded removing edge')
-                return True
-        return False
+        self.core_graph.remove_edge(a, b)
+        result = nx.has_path(self.core_graph, a, b)
+        self.core_graph.add_edge(a, b)
+        return result
+        #for path in nx.all_simple_paths(self.core_graph, a, b):
+            #if len(path) > 2:
+                ##print('succeeded removing edge')
+                #return True
+        #return False
 
 
 class LatticeGraphCache:
