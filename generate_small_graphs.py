@@ -12,7 +12,7 @@ from graph_dataset_utils import *
 if __name__ == '__main__':
     if not os.path.exists('./small_graphs/'):
         os.mkdir('small_graphs')
-        for i in range(2, 8+1):
+        for i in range(2, 9+1):
             filename = './graph%sc.g6' % i
             link = 'http://users.cecs.anu.edu.au/~bdm/data/graph%sc.g6' % i
             print('downloading dataset for graph_size=%s...' % i)
