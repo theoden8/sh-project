@@ -7,6 +7,7 @@ import subprocess
 
 from graph_utils import *
 from lattice_utils import *
+from lattice_visualization_utils import *
 
 
 if __name__ == '__main__':
@@ -15,8 +16,6 @@ if __name__ == '__main__':
     lattice = Lattice(nx.DiGraph())
     if os.path.exists(dbfile):
         lattice = Lattice.load(dbfile)
-    # g.remove_nodes_from([nd for nd in g.nodes() if 'small_graphs' not in nd])
-    # print(list(g.nodes()))
 
     for graph_file in sys.argv[1:]:
         graph_file = graph_file.replace('./', '')
@@ -26,5 +25,7 @@ if __name__ == '__main__':
         with open(dbfile, 'w') as f:
             json.dump(serialize_lattice(lattice), f)
     if len(lattice.g.nodes()) > 0:
+        export_to_vivagraphjs(lattice, 'lattice_vivagraphjs.html')
+        export_to_d3(lattice, 'lattice_graph_d3.json')
         plot_lattice(lattice, 'lattice.png')
         plot_adjacency_matrix(lattice.g, 'lattice_adj.png')

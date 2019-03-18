@@ -3,6 +3,7 @@
 
 from graph_utils import *
 from lattice_utils import *
+from lattice_visualization_utils import *
 
 
 if __name__ == '__main__':

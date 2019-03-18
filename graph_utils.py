@@ -177,3 +177,31 @@ def deserialize_digraph(s):
         g.add_node(nd)
     g.add_edges_from(edges)
     return g
+
+
+def is_complete(g):
+    for u in range(len(g.nodes())):
+        for v in range(len(g.nodes())):
+            if u != v and not g.has_edge(u, v):
+                return False
+    return True
+
+
+def is_path(g):
+    # we know it's connected
+    leaves = 0
+    for nd in g.nodes():
+        if g.degree(nd) == 1:
+            leaves += 1
+        elif g.degree(nd) != 2:
+            return False
+        if leaves > 2:
+            return False
+    return nx.is_tree(g) and leaves == 2
+
+
+def is_cycle(g):
+    for nd in g.nodes():
+        if g.degree(nd) != 2:
+            return False
+    return True
