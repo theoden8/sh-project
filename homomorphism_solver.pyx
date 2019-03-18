@@ -30,8 +30,8 @@ cdef class Solver:
     cdef int i
     cdef int action
     cdef vector[vector[int]] possibles
-    cdef vector[int] srcs
-    cdef vector[int] soln_inds
+    cdef vector[int] g_nodes
+    cdef vector[int] hcolor_inds
     cdef vector[int] soln
 
     # heuristics
@@ -65,10 +65,10 @@ cdef class Solver:
         for i in range(self.no_gnodes):
             for j in range(self.no_hnodes):
                 self.possibles[i][j] = j
-        self.srcs = vector[int](self.no_gnodes, self.UNDEFINED)
+        self.g_nodes = vector[int](self.no_gnodes, self.UNDEFINED)
         for i in range(self.no_gnodes):
-            self.srcs[i] = i
-        self.soln_inds = vector[int](self.no_gnodes, self.UNDEFINED)
+            self.g_nodes[i] = i
+        self.hcolor_inds = vector[int](self.no_gnodes, self.UNDEFINED)
         self.soln = vector[int](self.no_gnodes, self.UNDEFINED)
         self.action = self.FORWARD
 
@@ -82,16 +82,16 @@ cdef class Solver:
         cdef int i
         cdef unsigned hcolor
         i = 0 if self.i < 0 else self.i
-        hcolor = self.srcs[i]
-        return self.soln_ind() == self.possibles[hcolor].size() - 1
+        hcolor = self.g_nodes[i]
+        return self.hcolor_ind() == self.possibles[hcolor].size() - 1
 
     cdef bool is_valid_option(self, int val=-1) nogil:
         cdef int i
         cdef unsigned hcolor
         i = 0 if self.i < 0 else self.i
-        hcolor = self.srcs[i]
+        hcolor = self.g_nodes[i]
         if val == -1:
-            val = self.soln_ind()
+            val = self.hcolor_ind()
         return val >= 0 and val < self.possibles[hcolor].size()
 
     cdef void forward_node(self, int mapto) nogil:
@@ -99,10 +99,10 @@ cdef class Solver:
         cdef unsigned ind
         cdef unsigned hcolor
         i = 0 if self.i == -1 else self.i
-        ind = self.srcs[i]
+        ind = self.g_nodes[i]
         self.action = self.FORWARD
-        self.soln_inds[ind] = mapto
-        hcolor = self.soln_inds[ind]
+        self.hcolor_inds[ind] = mapto
+        hcolor = self.hcolor_inds[ind]
         self.soln[ind] = self.possibles[ind][hcolor]
         self.i += 1
 
@@ -110,18 +110,18 @@ cdef class Solver:
         cdef int i
         cdef unsigned ind
         i = max(0, self.i)
-        ind = self.srcs[i]
+        ind = self.g_nodes[i]
         self.error_g[ind] += 1
         self.action = self.BACKTRACK
-        # self.srcs[i] = Solver.UNDEFINED
-        self.soln_inds[ind] = self.UNDEFINED
+        # self.g_nodes[i] = Solver.UNDEFINED
+        self.hcolor_inds[ind] = self.UNDEFINED
         self.soln[ind] = self.UNDEFINED
         self.i -= 1
 
-    cdef int soln_ind(self) nogil:
+    cdef int hcolor_ind(self) nogil:
         cdef int i
         i = max(0, self.i)
-        return self.soln_inds[self.srcs[i]]
+        return self.hcolor_inds[self.g_nodes[i]]
 
     cdef inline bool g_has_edge(self, int u, int v) nogil:
         return self.adjacency_g[u * self.no_gnodes + v]
@@ -132,8 +132,8 @@ cdef class Solver:
     cdef inline int find_possible_map(self) nogil:
         cdef int i, ind, mapto
         i = 0 if self.i < 0 else self.i
-        ind = self.srcs[i]
-        mapto = self.soln_ind() + 1
+        ind = self.g_nodes[i]
+        mapto = self.hcolor_ind() + 1
         # print(self.soln)
         while self.is_valid_option(mapto):
             approved = True
@@ -141,7 +141,7 @@ cdef class Solver:
                 gu = ind
                 hu = self.possibles[gu][mapto]
                 for j in range(i):
-                    gv = self.srcs[j]
+                    gv = self.g_nodes[j]
                     hv = self.soln[gv]
                     if self.g_has_edge(gu, gv) and not self.h_has_edge(hu, hv):
                         approved = False
@@ -180,24 +180,24 @@ cdef class Solver:
     # heuristics
     cdef choose_best_node(self):
         cdef int option, rating, new_rating, ind
-        cdef vector[int] srcs_visited
+        cdef vector[int] g_nodes_visited
         cdef set[int] visited
         option, rating = -1, -1
-        srcs_visited = self.srcs[:self.i]
-        visited = set[int](self.srcs[:self.i])
+        g_nodes_visited = self.g_nodes[:self.i]
+        visited = set[int](self.g_nodes[:self.i])
         for ind in range(len(self)):
             if visited.count(ind):
                 continue
             new_rating = 0
-            new_rating += 100 * self.count_g_neighbors_in_set(ind, srcs_visited)
-            new_rating += 50 * self.count_h_neighbors_in_set(ind, srcs_visited)
+            new_rating += 100 * self.count_g_neighbors_in_set(ind, g_nodes_visited)
+            new_rating += 50 * self.count_h_neighbors_in_set(ind, g_nodes_visited)
             if new_rating > rating:
                 option, rating = ind, new_rating
             elif new_rating == rating and self.error_g[ind] > self.error_g[option]:
                 option, rating = ind, new_rating
         if option != -1:
             return option
-        return self.srcs[self.i]
+        return self.g_nodes[self.i]
 
     cdef int choose_target_rating_func(self, int g_ind, int h_ind) nogil:
         cdef int i, target, nb_count, rating
@@ -206,8 +206,8 @@ cdef class Solver:
         target = self.possibles[g_ind][h_ind]
         map_image = vector[int](i)
         for idx in range(i):
-            map_image[idx] = self.soln[self.srcs[idx]]
-        # map_image = [self.soln[idx] for idx in self.srcs[:i]]
+            map_image[idx] = self.soln[self.g_nodes[idx]]
+        # map_image = [self.soln[idx] for idx in self.g_nodes[:i]]
         rating = 0
         nb_count = self.count_h_neighbors_in_set(target, map_image)
         rating += 10000 * nb_count
@@ -219,10 +219,11 @@ cdef class Solver:
     cdef void choose_target_order(self):
         cdef int i, g_ind
         i = max(0, self.i)
-        g_ind = self.srcs[i]
+        g_ind = self.g_nodes[i]
         hcolors = [x for x in self.possibles[g_ind]]
         hcolors.sort(key=lambda h_ind: self.choose_target_rating_func(g_ind, h_ind), reverse=True)
         self.possibles[g_ind] = hcolors
+        # print(self.i, [x for x in self.possibles[g_ind]])
 
     cpdef find_solutions(self, stopfunc):
         while True:
@@ -230,14 +231,12 @@ cdef class Solver:
                 # print(self)
                 if self.action == self.FORWARD:
                     # choose g-node
-                    self.srcs[self.i] = self.choose_best_node()
-                    if self.is_last_option():
-                        self.set_rollback()
-                assert self.i >= -1
-                if self.action == self.BACKTRACK and self.soln_ind() != self.UNDEFINED:
-                    if self.i < len(self) / 2:
-                        # select order in which h-colors will be tested
+                    self.g_nodes[self.i] = self.choose_best_node()
+                    # select order in which h-colors will be tested
+                    if self.i + 5 < self.soln.size():
                         self.choose_target_order()
+                assert self.i >= -1
+                if self.action == self.BACKTRACK and self.hcolor_ind() != self.UNDEFINED:
                     pass
                 mapto = self.find_possible_map()
                 if self.is_valid_option(mapto):
@@ -259,7 +258,7 @@ cdef class Solver:
     def __str__(self):
         s = 'backtrack' if self.action else 'forward'
         s += ' ' + str(self.i) + ' soln:'
-        # s += str([self.soln_ind[x] for x in self.srcs])
+        # s += str([self.hcolor_inds[x] for x in self.g_nodes])
         s += str([self.soln[i] for i in range(len(self.soln))])
         return s
 
