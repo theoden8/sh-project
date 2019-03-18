@@ -1,7 +1,6 @@
 import os
 import sys
 import subprocess
-
 import pathlib
 import math
 
@@ -67,8 +66,9 @@ def filter_nodes_neighborhood(g, nodelist, label):
     return label in nodelist
 
 
-def plot_node(lattice, nd):
+def plot_node(lattice, nd, **kwargs):
     imgname = 'graph_images/' + os.path.basename(nd).replace('.json', '.png')
+    alpha = kwargs['alpha'] if 'alpha' in kwargs else .2
     if not os.path.exists(imgname):
         plot_graph(load_graph(nd), imgname,
                    title=graph_label_rename(nd) + ' : ' + str(lattice.g.degree(nd)),
@@ -78,7 +78,7 @@ def plot_node(lattice, nd):
                    edge_width=20.,
                    edge_color='w',
                    facecolor=node_color_func(nd),
-                   fig_alpha=0.2)
+                   fig_alpha=alpha)
         print('plot graph', nd)
     return imgname
 
@@ -95,7 +95,7 @@ def export_to_vivagraphjs(lattice, filename):
         vivagraphjs = 'vivagraph.js'
         if not os.path.exists(vivagraphjs):
             subprocess.check_call(['wget', 'https://raw.githubusercontent.com/anvaka/VivaGraphJS/master/dist/vivagraph.js', '-qO', vivagraphjs])
-        vivagraph_uri = pathlib.Path(os.path.abspath(vivagraphjs)).as_uri()
+        vivagraph_uri = get_file_url(vivagraphjs)
         f.write("""
 <!DOCTYPE html>
 <html>
@@ -106,7 +106,10 @@ def export_to_vivagraphjs(lattice, filename):
         function main () {
             var graph = Viva.Graph.graph();\n""" % vivagraph_uri)
         for nd in g.nodes():
-            imgname = plot_node(lattice, nd)
+            total = float(len(lattice.g.edges()))
+            degree = float(lattice.g.degree(nd))
+            importance = (degree / total) ** .3
+            imgname = plot_node(lattice, nd, alpha=0.1 + (0.9 * importance))
             f.write("            graph.addNode('%s', {url : '%s'})\n" % (nd, get_file_url(imgname)))
         f.write('\n')
         for (u, v) in g.edges():
