@@ -22,12 +22,17 @@ def get_graph_id(gfile):
 
 
 class LatticePathFinder:
-    def __init__(self, lattice, nonedges):
+    def __init__(self, lattice, nonedges, cores):
         self.lattice = lattice
-        self.significant_nodes = [nd for nd in self.lattice.g.nodes() if self.check_node_significance(nd)]
+        if len(cores) == 0:
+            self.significant_nodes = [nd for nd in self.lattice.g.nodes() if self.check_node_significance(nd)]
+        else:
+            self.significant_nodes = cores
         self.core_graph = None
         self.core_graph_c = None
         self.update_core_graph(nonedges)
+        for c in cores:
+            self.update_node_significance(c)
 
     def update_core_graph(self, nonedges):
         subgraph = self.lattice.g.subgraph(self.significant_nodes)
@@ -41,8 +46,8 @@ class LatticePathFinder:
             a = self.get_equivalent_node(a)
             for b in nonedges[a]:
                 b = self.get_equivalent_node(b)
-                if not self.is_known_non_homomorphism(a, b):
-                    self.core_graph_c.add_edge(a, b)
+                #if not self.is_known_non_homomorphism(a, b):
+                self.core_graph_c.add_edge(a, b)
 
     def update_node_significance(self, nd):
         should_contain = self.check_node_significance(nd)
@@ -177,8 +182,7 @@ class LatticeGraphCache:
 class Lattice:
     def __init__(self, g, nonedges={}, cores=[]):
         self.g = g
-        self.cores = cores
-        self.path_finder = LatticePathFinder(self, nonedges)
+        self.path_finder = LatticePathFinder(self, nonedges, cores)
         self.cache = LatticeGraphCache(self)
 
     @staticmethod
@@ -201,7 +205,7 @@ class Lattice:
         for other_graph in sorted_significant_nodes:
             if nodename == other_graph:
                 continue
-            print('\t<?>', other_graph)
+            #print('\t<?>', other_graph)
             self.establish_homomorphism(nodename, other_graph)
             self.establish_homomorphism(other_graph, nodename)
             # we found an equivalence to an existing node
@@ -313,7 +317,7 @@ def serialize_lattice(lattice):
             for u in lattice.path_finder.core_graph_c.nodes()
 
     }
-    j['cores'] = lattice.cores
+    j['cores'] = lattice.path_finder.significant_nodes
     return j
 
 

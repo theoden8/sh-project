@@ -24,7 +24,7 @@ def graph_label_rename(label):
             return '$C_%s$' % n
         elif is_complete(g):
             return '$K_%s$' % n
-    return '${%s}^{%s}$' % (n, id % 1000)
+    return '${%s}^{%s}$' % (n, id % 1000000)
 
 
 def node_color_func(label):
