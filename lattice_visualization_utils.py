@@ -45,8 +45,10 @@ def node_color_func(label):
             return '#9999FF'
         elif n == 7:
             return '#FF99FF'
-        elif n >= 8:
+        elif n == 8:
             return '#99FFFF'
+        elif n >= 9:
+            return '#FF9999'
     return '#FFCCCC'
 
 
@@ -88,8 +90,31 @@ def get_file_url(filename):
     return pathlib.Path(abs_fname).as_uri()
 
 
+def is_interesting_node(lattice, nd):
+    if not lattice.path_finder.is_significant_node(nd):
+        return False
+    for nb in lattice.g.neighbors(nd):
+        if nb not in lattice.path_finder.core_graph.nodes():
+            return True
+    return False
+
+
+def contracted_node(g, nd):
+    preds = list(g.predecessors(nd))
+    succs = list(g.neighbors(nd))
+    for p in preds:
+        for s in succs:
+            g.add_edge(p, s)
+    g.remove_node(nd)
+    return g
+
+
 def export_to_vivagraphjs(lattice, filename):
     g = lattice.path_finder.core_graph
+    g = nx.transitive_reduction(g)
+    for nd in list(g.nodes()):
+        if not is_interesting_node(lattice, nd):
+            g = contracted_node(g, nd)
     g = nx.transitive_reduction(g)
     with open(filename, 'w') as f:
         vivagraphjs = 'vivagraph.js'
