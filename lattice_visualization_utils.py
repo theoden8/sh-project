@@ -31,9 +31,9 @@ def node_color_func(label):
     fname = label
     is_small = 'small_graphs' in os.path.dirname(label)
     if is_small:
-        n = int(os.path.basename(label).split('_')[1])
+        n = get_graph_size(label)
         g = load_graph(fname)
-        if is_path(g):
+        if n == 2 or is_path(g):
             return '#CCCCCC'
         elif is_cycle(g):
             return '#FFFFCC'
@@ -52,7 +52,19 @@ def node_color_func(label):
     return '#FFCCCC'
 
 
-def filter_significant_nodes(g, label):
+def node_color_func_alternative(label):
+    fname = label
+    is_small = 'small_graphs' in os.path.dirname(label)
+    if is_small:
+        n = get_graph_size(label)
+        g = load_graph(fname)
+        if n == 2 or is_complete(g):
+            return node_color_func(label)
+        return '#FF99FF'
+    return '#FF9999'
+
+
+def filter_representatives(g, label):
     if g.in_degree(label) != 1 or g.out_degree(label) != 1:
         return True
     nb = list(g.neighbors(label))[0]
@@ -68,7 +80,7 @@ def filter_nodes_neighborhood(g, nodelist, label):
     return label in nodelist
 
 
-def plot_node(lattice, nd, graph_images, **kwargs):
+def plot_node(lattice, nd, graph_images, ndcolorfunc, **kwargs):
     imgname = graph_images + '/' + os.path.basename(nd).replace('.json', '.png')
     if os.path.exists(imgname):
         return imgname
@@ -84,7 +96,7 @@ def plot_node(lattice, nd, graph_images, **kwargs):
                    label_func=lambda x: '',
                    maxsize=2,
                    node_size=500,
-                   colors=[node_color_func(nd)],
+                   colors=[ndcolorfunc(nd)],
                    edge_width=5.,
                    edge_color='w',
                    facecolor=node_color_func(nd),
@@ -99,7 +111,7 @@ def get_file_url(filename):
 
 
 # def is_interesting_node(lattice, nd):
-#     if not lattice.path_finder.is_significant_node(nd):
+#     if not lattice.path_finder.is_representative(nd):
 #         return False
 #     for nb in lattice.g.neighbors(nd):
 #         if nb not in lattice.path_finder.core_graph.nodes():
@@ -117,9 +129,11 @@ def get_file_url(filename):
 #     return g
 
 
-def plot_graph_icons(lattice, graph_images):
+def plot_graph_icons(lattice, graph_images, ndcolorfunc=node_color_func, **kwargs):
     # if os.path.exists(graph_images):
     #     subprocess.check_call(['rm', '-rvf', output_folder])
+    if not os.path.exists(graph_images):
+        os.mkdir(graph_images)
     g = lattice.path_finder.core_graph
     equivalence_class_size = lambda x : int((lattice.g.degree(x) - g.degree(x)) / 2) + 1
     max_size = max([equivalence_class_size(nd) for nd in g.nodes()])
@@ -127,7 +141,7 @@ def plot_graph_icons(lattice, graph_images):
     for nd in g.nodes():
         eq_class_size = float(equivalence_class_size(nd))
         importance = (eq_class_size / float(max_size)) ** .3
-        imgname = plot_node(lattice, nd, graph_images, alpha=0.05 + (0.6 * importance))
+        imgname = plot_node(lattice, nd, graph_images, ndcolorfunc=ndcolorfunc, alpha=0.05 + (0.6 * importance))
         image_names[nd] = imgname
     return image_names
 
@@ -136,13 +150,13 @@ def export_as_vivagraph(lattice, output_folder='visualizations'):
     if not os.path.exists(output_folder):
         os.mkdir(output_folder)
     graph_images = output_folder + '/graph_images'
+    graph_images_alt = output_folder + '/graph_images_alt'
     # g = nx.transitive_reduction(g)
     # for nd in list(g.nodes()):
     #     if not is_interesting_node(lattice, nd):
     #         g = contracted_node(g, nd)
     g = lattice.path_finder.core_graph
 
-    # os.mkdir(graph_images)
     g_data = {
         'nodes' : [],
         'links': [
@@ -154,10 +168,12 @@ def export_as_vivagraph(lattice, output_folder='visualizations'):
         ]
     }
     image_names = plot_graph_icons(lattice, graph_images)
+    image_names_alt = plot_graph_icons(lattice, graph_images_alt, ndcolorfunc=node_color_func_alternative)
     for nd in g.nodes():
         g_data['nodes'] += [{
             'name': nd,
-            'img': image_names[nd][len(output_folder) + 1:]
+            'img1': image_names[nd][len(output_folder) + 1:],
+            'img2': image_names_alt[nd][len(output_folder) + 1:]
         }]
     with open(output_folder + '/lattice_graph_vivagraph.json', 'w') as f:
         json.dump(g_data, f)
@@ -207,8 +223,8 @@ def plot_lattice(lattice, filename, **kwargs):
     new_g = g
 
     if len(nodelist) > 100:
-        #nodelist = [nd for nd in g.nodes() if filter_significant_nodes(g, nd)]
-        nodelist = lattice.path_finder.significant_nodes
+        #nodelist = [nd for nd in g.nodes() if filter_representatives(g, nd)]
+        nodelist = lattice.path_finder.representatives
         nodelist_neighborhood = [nd for nd in g.nodes() if filter_nodes_neighborhood(g, nodelist, nd)]
         if len(nodelist_neighborhood) > 1000:
             nodelist_neighborhood = nodelist
@@ -292,7 +308,7 @@ def graph_color(fname):
 
 
 def plot_adjacency_matrix(lattice, filename):
-    g = lattice.g
+    g = lattice.path_finder.core_graph
     red = (1, 0, 0)
     green = (0, 1, 0)
     blue = (0, 0, 1)
@@ -322,7 +338,7 @@ def plot_adjacency_matrix(lattice, filename):
         ctx.set_source_rgba(1., 1., 1., 1.)
         ctx.fill()
 
-        g_nodes = list(lattice.path_finder.significant_nodes)
+        g_nodes = list(g.nodes())
         n = len(g_nodes)
         rectsize = float(size) / n
         color_priority = [gray, yellow, green, cyan, black]

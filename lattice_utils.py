@@ -25,23 +25,23 @@ class LatticePathFinder:
     def __init__(self, lattice, nonedges, cores):
         self.lattice = lattice
         if len(cores) == 0:
-            self.significant_nodes = [nd for nd in self.lattice.g.nodes() if self.check_node_significance(nd)]
+            self.representatives = [nd for nd in self.lattice.g.nodes() if self.check_representativeness(nd)]
         else:
-            self.significant_nodes = cores
+            self.representatives = cores
         self.core_graph = None
         self.core_graph_c = None
         self.update_core_graph(nonedges)
         for c in cores:
-            self.update_node_significance(c)
+            self.update_representativeness(c)
 
     def update_core_graph(self, nonedges):
-        subgraph = self.lattice.g.subgraph(self.significant_nodes)
+        subgraph = self.lattice.g.subgraph(self.representatives)
 
         self.core_graph = nx.DiGraph(subgraph.edges())
-        self.core_graph.add_nodes_from(self.significant_nodes)
+        self.core_graph.add_nodes_from(self.representatives)
 
         self.core_graph_c = nx.DiGraph()
-        self.core_graph_c.add_nodes_from(self.significant_nodes)
+        self.core_graph_c.add_nodes_from(self.representatives)
         for a in nonedges:
             a = self.get_equivalent_node(a)
             for b in nonedges[a]:
@@ -49,37 +49,37 @@ class LatticePathFinder:
                 #if not self.is_known_non_homomorphism(a, b):
                 self.core_graph_c.add_edge(a, b)
 
-    def update_node_significance(self, nd):
-        should_contain = self.check_node_significance(nd)
-        if should_contain and not self.is_significant_node(nd):
-            self.significant_nodes += [nd]
+    def update_representativeness(self, nd):
+        should_contain = self.check_representativeness(nd)
+        if should_contain and not self.is_representative(nd):
+            self.representatives += [nd]
 
             self.core_graph.add_node(nd)
-            for candidate in self.significant_nodes:
+            for candidate in self.representatives:
                 if self.lattice.g.has_edge(candidate, nd):
                     self.core_graph.add_edge(candidate, nd)
                 if self.lattice.g.has_edge(nd, candidate):
                     self.core_graph.add_edge(nd, candidate)
             self.core_graph_c.add_node(nd)
-        elif not should_contain and self.is_significant_node(nd):
-            index = self.significant_nodes.index(nd)
-            del self.significant_nodes[index]
+        elif not should_contain and self.is_representative(nd):
+            index = self.representatives.index(nd)
+            del self.representatives[index]
             self.core_graph.remove_node(nd)
             self.core_graph_c.remove_node(nd)
 
     def get_equivalent_node(self, nd):
         g = self.lattice.g
-        if self.is_significant_node(nd):
+        if self.is_representative(nd):
             return nd
         for nb in g.neighbors(nd):
-            if self.is_significant_node(nb):
+            if self.is_representative(nb):
                 return nb
         return nd
 
-    def is_significant_node(self, nd):
-        return nd in self.significant_nodes
+    def is_representative(self, nd):
+        return nd in self.representatives
 
-    def check_node_significance(self, nd):
+    def check_representativeness(self, nd):
         g = self.lattice.g
         if g.in_degree(nd) == 0 or g.out_degree(nd) == 0:
             return True
@@ -125,7 +125,7 @@ class LatticePathFinder:
             self.core_graph_c.add_edge(a, b)
 
     def normalize_memoization(self, a):
-        if self.is_significant_node(a):
+        if self.is_representative(a):
             return
         #print('normalizing', a)
         equiv = self.get_equivalent_node(a)
@@ -168,9 +168,9 @@ class LatticeGraphCache:
 
     def update(self):
         for fname in list(self.cache.keys()):
-            if fname not in self.lattice.path_finder.significant_nodes:
+            if fname not in self.lattice.path_finder.representatives:
                 del self.cache[fname]
-        for fname in self.lattice.path_finder.significant_nodes:
+        for fname in self.lattice.path_finder.representatives:
             if fname not in self.cache:
                 self.cache[fname] = self.load(fname)
 
@@ -200,10 +200,10 @@ class Lattice:
             print('already exists', nodename)
             return
         self.g.add_node(nodename)
-        self.path_finder.update_node_significance(nodename)
+        self.path_finder.update_representativeness(nodename)
         self.cache.update()
-        sorted_significant_nodes = sorted(self.path_finder.significant_nodes, key=lambda nd: self.g.degree(nd), reverse=True)
-        for other_graph in sorted_significant_nodes:
+        sorted_representatives = sorted(self.path_finder.representatives, key=lambda nd: self.g.degree(nd), reverse=True)
+        for other_graph in sorted_representatives:
             if nodename == other_graph:
                 continue
             #print('\t<?>', other_graph)
@@ -219,11 +219,12 @@ class Lattice:
                     if nb == other_graph:
                         continue
                     self.g.remove_edge(nb, nodename)
-                self.path_finder.update_node_significance(nodename)
+                self.path_finder.update_representativeness(nodename)
                 self.path_finder.normalize_memoization(nodename)
                 break
 
     def is_homomorphic(self, gfile, hfile):
+        print('eval %s -> %s' % (gfile, hfile))
         if gfile == hfile:
             return True
         g_known, h_known = gfile in self.g.nodes(), hfile in self.g.nodes()
@@ -241,7 +242,25 @@ class Lattice:
                 if self.find_homomorphism(nh, hfile) is not None:
                     return False
         elif not g_known and h_known:
-            pass
+            return self.find_homomorphism(gfile, self.path_finder.get_equivalent_node(hfile)) is not None
+        else:
+            sorted_cores = self.path_finder.representatives
+            g_core = None
+            for core in sorted_cores:
+                gc_result = self.find_homomorphism(gfile, core) is not None
+                if gc_result:
+                    if g_core is None or self.path_finder.has_path(g_core, core):
+                        g_core = core
+                        ch_result = self.find_homomorphism(g_core, hfile) is not None
+                        if not ch_result:
+                            return False
+                        hc_result = self.find_homomorphism(hfile, core) is not None
+                        if hc_result:
+                            return self.is_homomorphic(gfile, core)
+            if g_core is not None:
+                cg_result = self.find_homomorphism(g_core, gfile) is not None
+                if cg_result:
+                    return self.is_homomorphic(g_core, hfile)
         print('test %s -> %s' % (gfile, hfile))
         return self.find_homomorphism(gfile, hfile) is not None
 
@@ -256,23 +275,23 @@ class Lattice:
         #print('add edge', gfile, hfile)
         self.g.add_edge(gfile, hfile)
         if self.g.has_edge(hfile, gfile):
-            self.path_finder.update_node_significance(gfile)
-            self.path_finder.update_node_significance(hfile)
+            self.path_finder.update_representativeness(gfile)
+            self.path_finder.update_representativeness(hfile)
 
     def remove_edge(self, gfile, hfile):
         if self.path_finder.can_remove_edge(gfile, hfile):
             self.g.remove_edge(gfile, hfile)
-            self.path_finder.update_node_significance(gfile)
-            self.path_finder.update_node_significance(hfile)
+            self.path_finder.update_representativeness(gfile)
+            self.path_finder.update_representativeness(hfile)
             #print('\t%s /-> %s' % (gfile, out))
 
     def establish_homomorphism(self, gfile, hfile):
         if self.path_finder.is_known_relation(gfile, hfile):
             return self.path_finder.has_path(gfile, hfile)
 
-        if not self.path_finder.is_significant_node(gfile) or not self.path_finder.is_significant_node(hfile):
+        if not self.path_finder.is_representative(gfile) or not self.path_finder.is_representative(hfile):
             return None
-        assert self.path_finder.is_significant_node(hfile)
+        assert self.path_finder.is_representative(hfile)
         #print('establish homomorphism', gfile, hfile)
 
         phi = self.find_homomorphism(gfile, hfile)
@@ -303,7 +322,7 @@ def serialize_lattice(lattice):
             for u in lattice.path_finder.core_graph_c.nodes()
 
     }
-    j['cores'] = lattice.path_finder.significant_nodes
+    j['cores'] = lattice.path_finder.representatives
     return j
 
 

@@ -24,7 +24,7 @@ def plot_graphs(Gs, ssizes, filename, **kwargs):
     layout = kwargs['layout'] if 'layout' in kwargs else nx.kamada_kawai_layout
     colors = kwargs['colors'] if 'colors' in kwargs else ['r']
     title_font_size = kwargs['title_font_size'] if 'title_font_size' in kwargs else 40
-    title_color = kwargs['title_color'] if 'title_color' in kwargs else 40
+    title_color = kwargs['title_color'] if 'title_color' in kwargs else 'k'
     label_font_size = kwargs['label_font_size'] if 'label_font_size' in kwargs else 20
     node_size = kwargs['node_size'] if 'node_size' in kwargs else 1800
     label_rename_func = kwargs['label_func'] if 'label_func' in kwargs else str
@@ -54,7 +54,7 @@ def plot_graphs(Gs, ssizes, filename, **kwargs):
             nx.draw_networkx_labels(G, pos,
                                     labels={i : label_rename_func(i) for i in list(G.nodes)},
                                     font_size=label_font_size,
-                                    font_family='Verdana',
+                                    #font_family='Verdana',
                                     font_weight='bold',
                                     font_color='w',
                                     alpha=1.,
