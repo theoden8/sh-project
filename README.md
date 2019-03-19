@@ -10,8 +10,6 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 * homomorphism_solver.pyx: mediocre homomorphism solver (rewritten in Cython)
 
-* plot_graph_families.py: generates pictures of some graph families. Exists here for the purposes of testing graph_utils
-
 * solve_homomorphism.py: tries to find a homomorphism between two given graphs
 
 * plot_homomorphism.py: generates an image of a given graph homomorphism
@@ -47,6 +45,8 @@ This repository contains files related to the SH project called "Graph Homomorph
 * make_lattice.py: incrementally constructs a partial order graph out of given files, and produces an image
 
 * lattice_utils.py: utilities for lattice operations
+
+* lattice_visualization_utils.py: utilities for visualizing lattice graph
 
 * make_lattice_animation.py: construct frames for an animation
 
@@ -125,6 +125,7 @@ time ./solve_homomorphism.py <gfile> <hfile>
 ./gap_test_lattice_relations
 # verify the most important relations
 ./test_important_lattice_relations
+# open visualization/index.html or visualization/index_d3.html for interactive graph
 ```
 
 ##### animation
