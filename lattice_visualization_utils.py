@@ -132,7 +132,7 @@ def plot_graph_icons(lattice, graph_images):
     return image_names
 
 
-def export_as_vivagraph(lattice, output_folder):
+def export_as_vivagraph(lattice, output_folder='visualizations'):
     if not os.path.exists(output_folder):
         os.mkdir(output_folder)
     graph_images = output_folder + '/graph_images'
@@ -140,11 +140,7 @@ def export_as_vivagraph(lattice, output_folder):
     # for nd in list(g.nodes()):
     #     if not is_interesting_node(lattice, nd):
     #         g = contracted_node(g, nd)
-    g = nx.transitive_reduction(lattice.path_finder.core_graph)
-    for (u, v) in list(lattice.g.subgraph(g.nodes()).edges()):
-        if not g.has_edge(u, v):
-            lattice.g.remove_edge(u, v)
-    lattice.path_finder.core_graph = g
+    g = lattice.path_finder.core_graph
 
     # os.mkdir(graph_images)
     g_data = {
@@ -165,15 +161,14 @@ def export_as_vivagraph(lattice, output_folder):
         }]
     with open(output_folder + '/lattice_graph_vivagraph.json', 'w') as f:
         json.dump(g_data, f)
-    print('exported graph as vivagraph to', output_folder + '/')
+    print('exported graph as vivagraph to', output_folder)
 
 
 def export_as_d3(lattice, output_folder='visualizations'):
     if not os.path.exists(output_folder):
         os.mkdir(output_folder)
     graph_images = output_folder + '/graph_images'
-    g = nx.transitive_reduction(lattice.path_finder.core_graph)
-    lattice.path_finder.core_graph = g
+    g = lattice.path_finder.core_graph
     image_names = plot_graph_icons(lattice, graph_images)
     with open(output_folder + '/lattice_graph_d3.json', 'w') as f:
         g_nodes = list(g.nodes())
@@ -327,13 +322,12 @@ def plot_adjacency_matrix(lattice, filename):
         ctx.set_source_rgba(1., 1., 1., 1.)
         ctx.fill()
 
-        n = len(g)
-        rectsize = float(size) / n
         g_nodes = list(lattice.path_finder.significant_nodes)
+        n = len(g_nodes)
+        rectsize = float(size) / n
         color_priority = [gray, yellow, green, cyan, black]
         def sort_func(gfile):
-            with open(gfile, 'r') as f:
-                g = deserialize_digraph(f.read())
+            g = lattice.cache.load(gfile)
             n = get_graph_size(gfile)
             e = len(g.edges())
             return n * 10000 + e
@@ -347,7 +341,7 @@ def plot_adjacency_matrix(lattice, filename):
                 if col_color in color_priority and color_priority.index(col_color) < color_priority.index(cell_color):
                     cell_color = col_color
 
-                if g.has_edge(g_nodes[i], g_nodes[j]) or nx.has_path(g, g_nodes[i], g_nodes[j]):
+                if lattice.path_finder.is_known_homomorphism(g_nodes[i], g_nodes[j]):
                     cr, cg, cb = cell_color
                     ctx.rectangle(i * rectsize, j * rectsize, rectsize, rectsize)
                     ctx.set_source_rgba(cr, cg, cb, 1.)
@@ -355,5 +349,5 @@ def plot_adjacency_matrix(lattice, filename):
             ctx.stroke()
     print('finished creating a diagram')
     subprocess.check_call(['rsvg-convert', svg_fname, '-o', filename])
-    os.remove(svg_fname)
+    #os.remove(svg_fname)
     print('generated adjacency matrix', filename)

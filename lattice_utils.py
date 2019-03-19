@@ -141,9 +141,10 @@ class LatticePathFinder:
             return True
         elif self.is_known_non_homomorphism(a, b):
             return False
-        a = self.get_equivalent_node(a)
-        b = self.get_equivalent_node(b)
-        return nx.has_path(self.core_graph, a, b)
+        raise Exception("fuck!")
+        # a = self.get_equivalent_node(a)
+        # b = self.get_equivalent_node(b)
+        # return nx.has_path(self.core_graph, a, b)
 
     def can_remove_edge(self, a, b):
         #print('trying to remove edge', a, b)
@@ -247,27 +248,6 @@ class Lattice:
     def is_homomorphic_eq(self, gfile, hfile):
         return self.is_homomorphic(gfile, hfile) and self.is_homomorphic(hfile, gfile)
 
-#     def is_core(self, gfile):
-#         if gfile in self.cores:
-#             return True
-#         G = load_graph(gfile)
-        # if is_complete(G) or is_cycle(G):
-        #     return True
-#         for hfile in nx.dfs_tree(self.g, gfile).nodes():
-#             # can't be larger
-#             if gfile == hfile or get_graph_size(hfile) > get_graph_size(gfile):
-#                 continue
-#             # must be homomorphically equivalent
-#             if not self.is_homomorphic(hfile, gfile):
-#                 continue
-#             # we don't care if it's not an edge-induced subgraph
-#             H = load_graph(hfile)
-#             if not nx.isomorphism.GraphMatcher(nx.line_graph(G), nx.line_graph(H)).subgraph_is_isomorphic():
-#                 continue
-#             # must not be a core
-#             return self.is_core(hfile)
-#         return True
-
     def find_homomorphism(self, gfile, hfile):
         G, H = self.cache.load(gfile), self.cache.load(hfile)
         return is_homomorphic(G, H)
@@ -308,6 +288,12 @@ class Lattice:
                 self.remove_edge(gfile, out)
         self.path_finder.memoize_relation(gfile, hfile, True)
         return True
+
+    def transitive_reduction(self):
+        lattice.path_finder.core_graph = nx.transitive_reduction(lattice.path_finder.core_graph)
+        for (u, v) in list(lattice.g.subgraph(lattice.path_finder.core_graph.nodes()).edges()):
+            if not lattice.path_finder.core_graph.has_edge(u, v):
+                lattice.g.remove_edge(u, v)
 
 
 def serialize_lattice(lattice):
