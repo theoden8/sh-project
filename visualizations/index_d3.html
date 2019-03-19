@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<title>SH Lattice</title>
+<meta charset="utf-8">
+<script src='https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.5/MathJax.js?config=TeX-MML-AM_CHTML' async></script>
+<script src="http://d3js.org/d3.v2.min.js?2.9.3"></script>
+<style>
+
+.link {
+  stroke: #999;
+  stroke-width:.4px;
+}
+
+.node text {
+  stroke:#333;
+  cursos:pointer;
+}
+
+.node circle{
+  stroke-width:2px;
+  fill:#555;
+}
+
+</style>
+<body>
+<script>
+function getWidth() {
+  return Math.max(
+    document.body.scrollWidth,
+    document.documentElement.scrollWidth,
+    document.body.offsetWidth,
+    document.documentElement.offsetWidth,
+    document.documentElement.clientWidth
+  );
+}
+
+function getHeight() {
+  return Math.max(
+    document.body.scrollHeight,
+    document.documentElement.scrollHeight,
+    document.body.offsetHeight,
+    document.documentElement.offsetHeight,
+    document.documentElement.clientHeight
+  );
+}
+
+var width = getWidth() - 20,
+    height = getHeight() - 20
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+var force = d3.layout.force()
+    .gravity(.05)
+    .distance(20)
+    .charge(-10)
+    .size([width, height]);
+
+d3.json("lattice_graph_d3.json", function(json) {
+  force
+      .nodes(json.nodes)
+      .links(json.links)
+      .start();
+
+  var defs = svg.append("defs").attr("id", "imgdefs")
+  json.nodes.forEach((nd) => {
+    var ndpattern = defs.append("pattern")
+                        .attr("id", "asd")
+                        .attr("height", 1)
+                        .attr("width", 1)
+                        .attr("x", "0")
+                        .attr("y", "0");
+    ndpattern.append("image")
+        .attr("xlink:href", nd.img);
+  });
+
+  var link = svg.selectAll(".link")
+      .data(json.links)
+    .enter().append("line")
+      .attr("class", "link");
+
+  var node = svg.selectAll(".node")
+      .data(json.nodes)
+    .enter().append("g")
+      .attr("class", "node")
+      .call(force.drag);
+
+  node.append("circle")
+      .attr("r", "5")
+      .attr("stroke", function(d) { return d.color });
+
+  force.on("tick", function() {
+    link.attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node.attr("transform", function(d) { return "translate(" + d.x + "," + d.y + ")"; });
+  });
+
+  svg.selectAll("circle").on("click", function(){
+    if (!d3.select(this).classed("selected")) {
+      d3.select(this)
+        .attr('r', '25')
+        .attr("fill", "url(#asd)")
+        .classed("selected", true)
+    }
+    else {
+      d3.select(this)
+        .attr('r', '5')
+        .classed("selected", false);
+    }
+  });
+});
+</script>

@@ -8,11 +8,9 @@
 *.log
 *.txt
 *.json
-*.html
 *.mp3
 *.mp4
 *.zip
-vivagraph.js
 .*.swp
 !/images/*.png
 gap_config.sh

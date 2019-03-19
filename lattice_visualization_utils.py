@@ -68,16 +68,24 @@ def filter_nodes_neighborhood(g, nodelist, label):
     return label in nodelist
 
 
-def plot_node(lattice, nd, **kwargs):
-    imgname = 'graph_images/' + os.path.basename(nd).replace('.json', '.png')
+def plot_node(lattice, nd, graph_images, **kwargs):
+    imgname = graph_images + '/' + os.path.basename(nd).replace('.json', '.png')
+    if os.path.exists(imgname):
+        return imgname
     alpha = kwargs['alpha'] if 'alpha' in kwargs else .2
     if not os.path.exists(imgname):
-        plot_graph(load_graph(nd), imgname,
-                   title=graph_label_rename(nd) + ' : ' + str(lattice.g.degree(nd)),
-                   maxsize=8,
-                   node_size=7000,
+        G = load_graph(nd)
+        g = lattice.path_finder.core_graph
+        eq_class_size = int((lattice.g.degree(nd) - g.degree(nd)) / 2) + 1
+        plot_graph(G, imgname,
+                   title=graph_label_rename(nd) + ' : ' + str(eq_class_size),
+                   title_font_size=12,
+                   title_color='w',
+                   label_func=lambda x: '',
+                   maxsize=2,
+                   node_size=500,
                    colors=[node_color_func(nd)],
-                   edge_width=20.,
+                   edge_width=5.,
                    edge_color='w',
                    facecolor=node_color_func(nd),
                    fig_alpha=alpha)
@@ -97,8 +105,8 @@ def get_file_url(filename):
 #         if nb not in lattice.path_finder.core_graph.nodes():
 #             return True
 #     return False
-# 
-# 
+#
+#
 # def contracted_node(g, nd):
 #     preds = list(g.predecessors(nd))
 #     succs = list(g.neighbors(nd))
@@ -109,133 +117,85 @@ def get_file_url(filename):
 #     return g
 
 
-def export_to_vivagraphjs(lattice, filename):
+def plot_graph_icons(lattice, graph_images):
+    # if os.path.exists(graph_images):
+    #     subprocess.check_call(['rm', '-rvf', output_folder])
     g = lattice.path_finder.core_graph
+    equivalence_class_size = lambda x : int((lattice.g.degree(x) - g.degree(x)) / 2) + 1
+    max_size = max([equivalence_class_size(nd) for nd in g.nodes()])
+    image_names = {}
+    for nd in g.nodes():
+        eq_class_size = float(equivalence_class_size(nd))
+        importance = (eq_class_size / float(max_size)) ** .3
+        imgname = plot_node(lattice, nd, graph_images, alpha=0.05 + (0.6 * importance))
+        image_names[nd] = imgname
+    return image_names
+
+
+def export_as_vivagraph(lattice, output_folder):
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
+    graph_images = output_folder + '/graph_images'
     # g = nx.transitive_reduction(g)
     # for nd in list(g.nodes()):
     #     if not is_interesting_node(lattice, nd):
     #         g = contracted_node(g, nd)
-    g = nx.transitive_reduction(g)
-    with open(filename, 'w') as f:
-        vivagraphjs = 'vivagraph.js'
-        if not os.path.exists(vivagraphjs):
-            subprocess.check_call(['wget', 'https://raw.githubusercontent.com/anvaka/VivaGraphJS/master/dist/vivagraph.js', '-qO', vivagraphjs])
-        vivagraph_uri = get_file_url(vivagraphjs)
-        f.write("""
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Graph Homomorphisms</title>
-    <script type="text/javascript" src="%s"></script>
-    <script type="text/javascript">
-        function main () {
-            var graph = Viva.Graph.graph();\n""" % vivagraph_uri)
-        total = max([lattice.g.degree(nd) for nd in g.nodes()])
-        if os.path.exists('graph_images'):
-            for fname in os.listdir('graph_images/'):
-                os.remove('graph_images/' + fname)
-                print('removed file graph_images/%s' % fname)
-        else:
-            os.mkdir('graph_images')
-        for nd in g.nodes():
-            degree = float(lattice.g.degree(nd))
-            importance = (degree / total) ** .3
-            imgname = plot_node(lattice, nd, alpha=0.05 + (0.6 * importance))
-            f.write("            graph.addNode('%s', {url : '%s'})\n" % (nd, get_file_url(imgname)))
-        f.write('\n')
-        for (u, v) in g.edges():
-            f.write("            graph.addLink('%s', '%s')\n" % (u, v))
-        f.write("""
-            var graphics = Viva.Graph.View.svgGraphics(),
-                nodeSize = 24;
-            graphics.node(function(node) {
-                return Viva.Graph.svg('image')
-                     .attr('width', nodeSize)
-                     .attr('height', nodeSize)
-                     .link(node.data.url);
-            }).placeNode(function(nodeUI, pos) {
-                nodeUI.attr('x', pos.x - nodeSize / 2).attr('y', pos.y - nodeSize / 2);
-            });
-            // To render an arrow we have to address two problems:
-            //  1. Links should start/stop at node's bounding box, not at the node center.
-            //  2. Render an arrow shape at the end of the link.
-            // Rendering arrow shape is achieved by using SVG markers, part of the SVG
-            // standard: http://www.w3.org/TR/SVG/painting.html#Markers
-            var createMarker = function(id) {
-                    return Viva.Graph.svg('marker')
-                               .attr('id', id)
-                               .attr('viewBox', "0 0 10 10")
-                               .attr('refX', "10")
-                               .attr('refY', "5")
-                               .attr('markerUnits', "strokeWidth")
-                               .attr('markerWidth', "10")
-                               .attr('markerHeight', "5")
-                               .attr('orient', "auto");
-                },
-                marker = createMarker('Triangle');
-            marker.append('path').attr('d', 'M 0 0 L 10 5 L 0 10 z');
-            // Marker should be defined only once in <defs> child element of root <svg> element:
-            var defs = graphics.getSvgRoot().append('defs');
-            defs.append(marker);
-            var geom = Viva.Graph.geom();
-            graphics.link(function(link){
-                // Notice the Triangle marker-end attribe:
-                return Viva.Graph.svg('path')
-                           .attr('stroke', 'gray')
-                           .attr('background-color', 'white')
-                           .attr('marker-end', 'url(#Triangle)');
-            }).placeLink(function(linkUI, fromPos, toPos) {
-                // Here we should take care about
-                //  "Links should start/stop at node's bounding box, not at the node center."
-                // For rectangular nodes Viva.Graph.geom() provides efficient way to find
-                // an intersection point between segment and rectangle
-                var toNodeSize = nodeSize,
-                    fromNodeSize = nodeSize;
-                var from = geom.intersectRect(
-                        // rectangle:
-                                fromPos.x - fromNodeSize / 2, // left
-                                fromPos.y - fromNodeSize / 2, // top
-                                fromPos.x + fromNodeSize / 2, // right
-                                fromPos.y + fromNodeSize / 2, // bottom
-                        // segment:
-                                fromPos.x, fromPos.y, toPos.x, toPos.y)
-                           || fromPos; // if no intersection found - return center of the node
-                var to = geom.intersectRect(
-                        // rectangle:
-                                toPos.x - toNodeSize / 2, // left
-                                toPos.y - toNodeSize / 2, // top
-                                toPos.x + toNodeSize / 2, // right
-                                toPos.y + toNodeSize / 2, // bottom
-                        // segment:
-                                toPos.x, toPos.y, fromPos.x, fromPos.y)
-                            || toPos; // if no intersection found - return center of the node
-                var data = 'M' + from.x + ',' + from.y +
-                           'L' + to.x + ',' + to.y;
-                linkUI.attr("d", data);
-            });
+    g = nx.transitive_reduction(lattice.path_finder.core_graph)
+    for (u, v) in list(lattice.g.subgraph(g.nodes()).edges()):
+        if not g.has_edge(u, v):
+            lattice.g.remove_edge(u, v)
+    lattice.path_finder.core_graph = g
 
-            var renderer = Viva.Graph.View.renderer(graph, {
-                graphics : graphics
-            });
-            renderer.run();
+    # os.mkdir(graph_images)
+    g_data = {
+        'nodes' : [],
+        'links': [
+            {
+                'source': u,
+                'target': v
+            }
+            for (u, v) in g.edges()
+        ]
+    }
+    image_names = plot_graph_icons(lattice, graph_images)
+    for nd in g.nodes():
+        g_data['nodes'] += [{
+            'name': nd,
+            'img': image_names[nd][len(output_folder) + 1:]
+        }]
+    with open(output_folder + '/lattice_graph_vivagraph.json', 'w') as f:
+        json.dump(g_data, f)
+    print('exported graph as vivagraph to', output_folder + '/')
+
+
+def export_as_d3(lattice, output_folder='visualizations'):
+    if not os.path.exists(output_folder):
+        os.mkdir(output_folder)
+    graph_images = output_folder + '/graph_images'
+    g = nx.transitive_reduction(lattice.path_finder.core_graph)
+    lattice.path_finder.core_graph = g
+    image_names = plot_graph_icons(lattice, graph_images)
+    with open(output_folder + '/lattice_graph_d3.json', 'w') as f:
+        g_nodes = list(g.nodes())
+        data = {
+            'nodes': [
+                {
+                    'name': graph_label_rename(nd),
+                    'color': node_color_func(nd),
+                    'img': image_names[nd][len(output_folder) + 1:]
+                }
+                for nd in g_nodes
+            ],
+            'links': [
+                {
+                    'source': g_nodes.index(u),
+                    'target': g_nodes.index(v)
+                }
+                for (u, v) in g.edges()
+            ]
         }
-        </script>
-
-    <style type="text/css" media="screen">html, body, svg { width: 100%; height: 100%; }</style>
-</head>
-<body onload='main()' bgcolor='#555566'></body>
-</html>""")
-    print('exported graph as vivagraphjs to', filename)
-
-
-def export_to_d3(lattice, filename):
-    g = lattice.g
-    with open(filename, 'w') as f:
-        json.dump(serialize_graph(g), f)
-    with open('lattice_d3_template.html', 'r') as fr:
-        with open('lattice_d3.html', 'w') as fw:
-            fw.write(fr.read().replace('lattice_graph_d3.json', os.path.abspath(filename)))
-    print('exported graph as d3 to', filename)
+        json.dump(data, f)
+    print('exported graph as d3 to', output_folder)
 
 
 def plot_lattice(lattice, filename, **kwargs):
@@ -336,7 +296,8 @@ def graph_color(fname):
     return black
 
 
-def plot_adjacency_matrix(g, filename):
+def plot_adjacency_matrix(lattice, filename):
+    g = lattice.g
     red = (1, 0, 0)
     green = (0, 1, 0)
     blue = (0, 0, 1)
@@ -368,7 +329,7 @@ def plot_adjacency_matrix(g, filename):
 
         n = len(g)
         rectsize = float(size) / n
-        g_nodes = list(g.nodes())
+        g_nodes = list(lattice.path_finder.significant_nodes)
         color_priority = [gray, yellow, green, cyan, black]
         def sort_func(gfile):
             with open(gfile, 'r') as f:
@@ -378,6 +339,7 @@ def plot_adjacency_matrix(g, filename):
             return n * 10000 + e
         g_nodes.sort(key=sort_func)
         for i in range(n):
+            print('row', i)
             row_color = graph_color(g_nodes[i])
             for j in range(n):
                 col_color = graph_color(g_nodes[j])

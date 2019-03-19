@@ -25,7 +25,7 @@ if __name__ == '__main__':
         with open(dbfile, 'w') as f:
             json.dump(serialize_lattice(lattice), f)
     if len(lattice.g.nodes()) > 0:
-        export_to_vivagraphjs(lattice, 'lattice_vivagraphjs.html')
-        export_to_d3(lattice, 'lattice_graph_d3.json')
+        export_as_vivagraph(lattice, 'visualizations')
+        export_as_d3(lattice, 'visualizations')
         plot_lattice(lattice, 'lattice.png')
-        plot_adjacency_matrix(lattice.g, 'lattice_adj.png')
+        plot_adjacency_matrix(lattice, 'lattice_adj.png')
