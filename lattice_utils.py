@@ -141,7 +141,7 @@ class LatticePathFinder:
             return True
         elif self.is_known_non_homomorphism(a, b):
             return False
-        raise Exception("fuck!")
+        raise Exception("unexpected scenareo")
         # a = self.get_equivalent_node(a)
         # b = self.get_equivalent_node(b)
         # return nx.has_path(self.core_graph, a, b)
