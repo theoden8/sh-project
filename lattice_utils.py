@@ -290,10 +290,10 @@ class Lattice:
         return True
 
     def transitive_reduction(self):
-        lattice.path_finder.core_graph = nx.transitive_reduction(lattice.path_finder.core_graph)
-        for (u, v) in list(lattice.g.subgraph(lattice.path_finder.core_graph.nodes()).edges()):
-            if not lattice.path_finder.core_graph.has_edge(u, v):
-                lattice.g.remove_edge(u, v)
+        self.path_finder.core_graph = nx.transitive_reduction(self.path_finder.core_graph)
+        for (u, v) in list(self.g.subgraph(self.path_finder.core_graph.nodes()).edges()):
+            if not self.path_finder.core_graph.has_edge(u, v):
+                self.g.remove_edge(u, v)
 
 
 def serialize_lattice(lattice):
