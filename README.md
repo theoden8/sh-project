@@ -32,8 +32,6 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 * gap_homomorphism_finder: uses GAP graph homomorphism finder to find a homomorphism between two graphs
 
-* gap_homomorphism_core_finder: uses GAP and a dataset of small graphs to find a potential core by trying to find a homomorphism from a given graph
-
 * gap_is_homomorphic_gh: uses GAP solver to print "YES" or "NO" if two graphs are homomorphic
 
 * gap_test_lattice_relations: uses local solver to verify that some randomly chosen relations are correct, and might use GAP solver to provide diagnostics
