@@ -16,25 +16,14 @@
 }
 
 gfile=$1;shift
-hfile=$1;shift
 
 [ -z "$gfile" ] && {
     >&2 echo "error: please, specify file for G"
     exit 1
 }
 
-[ -z "$hfile" ] && {
-    >&2 echo "error: please, specify file for H"
-    exit 1
-}
-
 [ -f "$gfile" ] || {
     >&2 echo "error: couldn't find a valid file for G"
-    exit 1
-}
-
-[ -f "$hfile" ] || {
-    >&2 echo "error: couldn't find a valid file for H"
     exit 1
 }
 
@@ -64,16 +53,16 @@ gap_script="
 LoadPackage(\"Digraphs\");
 
 g := Digraph($(env python3 -c "$(create_adjacency_list "$gfile")"));
-h := Digraph($(env python3 -c "$(create_adjacency_list "$hfile")"));
 
 # establish somehow if two graphs are homomorphic to each other
-Print(\"RESULT $gfile\t$hfile\t\", DigraphHomomorphism(g, h), \"\\n\");
+Print(\"RESULT\", AutomorphismGroup(g), \"\\n\");
 "
-# echo "$gap_script" | pygmentize -l shell
 start=0
-$GAP --quitonbreak <<< "${gap_script}" | while IFS= read -r line; do
+result=$($GAP --quitonbreak <<< "${gap_script}" | while IFS= read -r line; do
     [ -z "$(echo "$line" | grep 'RESULT')" ] || start=1
     [ $start -eq 1 ] && {
-        echo "$line"
+        echo "$line" | sed 's/ //g'
     }
-done | tr '\n' ' ' | sed 's/.*RESULT //'
+done | tr '\n' ' ' | sed -e 's/.*RESULT//' -e 's/Group//g')
+result=$(env python3 -c "print('${result}'.strip()[1:-1].replace('),(', '), ('))")
+echo "$gfile $result"

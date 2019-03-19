@@ -1,0 +1,18 @@
+#!/bin/bash
+
+
+env python3 -c "
+import json
+
+if __name__ == '__main__':
+    fname = 'lattice.json'
+    cores = None
+    with open('lattice.json', 'r') as f:
+        cores = json.load(f)['cores']
+    for core in cores:
+        print(core)
+" | {
+    while IFS= read -r line; do
+        ./gap_automorphism_group_finder "$line"
+    done
+}

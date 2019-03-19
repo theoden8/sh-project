@@ -38,6 +38,10 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 * test_important_lattice_relations: fully verifies that all important nodes are connected correctly
 
+* gap_find_automorphism_group: uses GAP to find an automorphism group for a graph
+
+* gap_find_cores_automorphisms: uses GAP to list automorphism groups for found cores
+
   ---
 
 * make_lattice.py: incrementally constructs a partial order graph out of given files, and produces an image

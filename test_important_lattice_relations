@@ -20,11 +20,11 @@ def print_comparison(lattice, gfile, hfile):
 
 if __name__ == '__main__':
     lattice = Lattice.load('$fname')
-    significant_nodes = lattice.path_finder.significant_nodes
-    significant_nodes.sort(key=lambda nd: get_graph_size(nd) * 100000 + get_graph_id(nd))
-    for i in range(1, len(significant_nodes)):
-        g = significant_nodes[i]
-        for h in significant_nodes[:i]:
+    representatives = lattice.path_finder.representatives
+    representatives.sort(key=lambda nd: get_graph_size(nd) * 100000 + get_graph_id(nd))
+    for i in range(1, len(representatives)):
+        g = representatives[i]
+        for h in representatives[:i]:
             print_comparison(lattice, g, h)
             print_comparison(lattice, h, g)
 " | {
