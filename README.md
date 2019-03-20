@@ -64,8 +64,6 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 The current version of solver is relatively slow and can't handle large graphs. It is written to work iteratively, and chooses which options to iterate and how, and when to backtrack.
 
-![homomorphism-45](/images/homomorphism-45.png)
-
 Some heuristics are being sought to improve its basic performance, such as connectedness to existing nodes, error heuristic and more.
 
 ## lattice
