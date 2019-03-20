@@ -266,6 +266,10 @@ cdef class Solver:
         return self.no_gnodes
 
 
+def compose_solutions(psi, phi):
+    return [phi[x] for x in psi]
+
+
 def find_homomorphisms(g, h):
     s = Solver(g, h)
     def stopfunc(soln):
@@ -273,6 +277,7 @@ def find_homomorphisms(g, h):
         return True
     s.find_solutions(stopfunc)
     return s.no_solns
+
 
 def is_homomorphic(g, h):
     s = Solver(g, h)
