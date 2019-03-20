@@ -245,22 +245,22 @@ class Lattice:
             return self.find_homomorphism(gfile, self.path_finder.get_equivalent_node(hfile)) is not None
         else:
             sorted_cores = self.path_finder.representatives
-            g_core = None
+            g_core_cand = None
             for core in sorted_cores:
                 gc_result = self.find_homomorphism(gfile, core) is not None
                 if gc_result:
-                    if g_core is None or self.path_finder.has_path(g_core, core):
-                        g_core = core
-                        ch_result = self.find_homomorphism(g_core, hfile) is not None
+                    if g_core_cand is None or self.path_finder.has_path(g_core_cand, core):
+                        g_core_cand = core
+                        ch_result = self.find_homomorphism(g_core_cand, hfile) is not None
                         if not ch_result:
                             return False
                         hc_result = self.find_homomorphism(hfile, core) is not None
                         if hc_result:
                             return self.is_homomorphic(gfile, core)
-            if g_core is not None:
-                cg_result = self.find_homomorphism(g_core, gfile) is not None
+            if g_core_cand is not None:
+                cg_result = self.find_homomorphism(g_core_cand, gfile) is not None
                 if cg_result:
-                    return self.is_homomorphic(g_core, hfile)
+                    return self.is_homomorphic(g_core_cand, hfile)
         print('test %s -> %s' % (gfile, hfile))
         return self.find_homomorphism(gfile, hfile) is not None
 
