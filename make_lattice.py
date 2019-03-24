@@ -22,11 +22,10 @@ if __name__ == '__main__':
         lattice.add_object(graph_file)
 
     if len(sys.argv) > 1:
-        with open(dbfile, 'w') as f:
-            json.dump(serialize_lattice(lattice), f)
+        lattice.unload(dbfile)
     lattice.transitive_reduction()
     if len(lattice.g.nodes()) > 0:
         export_as_vivagraph(lattice, 'visualizations')
         export_as_d3(lattice, 'visualizations')
-        # plot_lattice(lattice, 'lattice.png')
+        plot_lattice(lattice, 'lattice.png')
         plot_adjacency_matrix(lattice, 'lattice_adj.png')

@@ -151,7 +151,7 @@ def plot_homomorphism(G, H, phi, filename):
 def serialize_graph(g):
     return {
         'nodes': list(g.nodes()),
-        'edges': [(u, v) for (u, v) in g.edges()]
+        'edges': [[u, v] for (u, v) in g.edges()]
     }
 
 
@@ -167,6 +167,12 @@ def deserialize_graph(s):
 def load_graph(fname):
     with open(fname, 'r') as f:
         return deserialize_graph(f.read())
+
+
+def unload_graph(g, fname):
+    s = serialize_graph(g)
+    with open(fname, 'w') as f:
+        json.dump(s, f)
 
 
 def deserialize_digraph(s):

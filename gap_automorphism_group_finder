@@ -53,9 +53,8 @@ gap_script="
 LoadPackage(\"Digraphs\");
 
 g := Digraph($(env python3 -c "$(create_adjacency_list "$gfile")"));
-
-# establish somehow if two graphs are homomorphic to each other
-Print(\"RESULT\", AutomorphismGroup(g), \"\\n\");
+a := AutomorphismGroup(g);
+Print(\"RESULT\", a, \"_\", Size(a), \"\\n\");
 "
 start=0
 result=$($GAP --quitonbreak <<< "${gap_script}" | while IFS= read -r line; do
@@ -64,5 +63,5 @@ result=$($GAP --quitonbreak <<< "${gap_script}" | while IFS= read -r line; do
         echo "$line" | sed 's/ //g'
     }
 done | tr '\n' ' ' | sed -e 's/.*RESULT//' -e 's/Group//g')
-result=$(env python3 -c "print('${result}'.strip()[1:-1].replace('),(', '), ('))")
+result=$(env python3 -c "result = '$result'.strip().replace('),(', '), (').split('_');print('size=' + str(result[1]), result[0][1:-1])")
 echo "$gfile $result"

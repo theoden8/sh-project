@@ -14,31 +14,33 @@ from lattice_utils import *
 
 def graph_label_rename(label):
     fname = label
-    is_small = 'small_graphs' in os.path.dirname(label)
     n, id = get_graph_size(label), get_graph_id(label)
-    if is_small:
+    if 'small_graphs' in os.path.dirname(fname) or 'special_graphs' in os.path.dirname(fname):
         g = load_graph(fname)
         if is_path(g):
-            return '$P_%s$' % n
+            return '$P_{%s}$' % n
         elif is_cycle(g):
-            return '$C_%s$' % n
+            return '$C_{%s}$' % n
         elif is_complete(g):
-            return '$K_%s$' % n
+            return '$K_{%s}$' % n
+        elif 'kneser' in os.path.basename(fname):
+            kg_n, kg_k = os.path.basename(fname).split('_')[0].split('-')[1:]
+            return '$KG_{(%s, %s)}$' % (kg_n, kg_k)
     return '${%s}^{%s}$' % (n, id % 1000000)
 
 
 def node_color_func(label):
     fname = label
     is_small = 'small_graphs' in os.path.dirname(label)
-    if is_small:
+    if 'small_graphs' in os.path.dirname(fname) or 'special_graphs' in os.path.dirname(fname):
         n = get_graph_size(label)
         g = load_graph(fname)
-        if n == 2 or is_path(g):
-            return '#CCCCCC'
-        elif is_cycle(g):
+        if n == 2 or is_cycle(g):
             return '#FFFFCC'
         elif is_complete(g):
             return '#66FF66'
+        elif 'kneser' in os.path.basename(fname):
+            return '#FFFFFF'
         elif n <= 5:
             return '#00AAAA'
         elif n == 6:
@@ -54,8 +56,7 @@ def node_color_func(label):
 
 def node_color_func_alternative(label):
     fname = label
-    is_small = 'small_graphs' in os.path.dirname(label)
-    if is_small:
+    if 'small_graphs' in os.path.dirname(fname) or 'special_graphs' in os.path.dirname(fname):
         n = get_graph_size(label)
         g = load_graph(fname)
         if n == 2 or is_complete(g):
@@ -95,9 +96,9 @@ def plot_node(lattice, nd, graph_images, ndcolorfunc, **kwargs):
                    title_color='w',
                    label_func=lambda x: '',
                    maxsize=2,
-                   node_size=500,
+                   node_size=(500 if get_graph_size(nd) <= 10 else 300),
                    colors=[ndcolorfunc(nd)],
-                   edge_width=5.,
+                   edge_width=(5. if get_graph_size(nd) <= 10 else 3.),
                    edge_color='w',
                    facecolor=node_color_func(nd),
                    fig_alpha=alpha)
@@ -188,10 +189,11 @@ def export_as_d3(lattice, output_folder='visualizations'):
     image_names = plot_graph_icons(lattice, graph_images)
     with open(output_folder + '/lattice_graph_d3.json', 'w') as f:
         g_nodes = list(g.nodes())
+        equivalence_class_size = lambda x : int((lattice.g.degree(x) - g.degree(x)) / 2) + 1
         data = {
             'nodes': [
                 {
-                    'name': graph_label_rename(nd),
+                    'name': graph_label_rename(nd) + ' : ' + str(equivalence_class_size(nd)),
                     'color': node_color_func(nd),
                     'img': image_names[nd][len(output_folder) + 1:]
                 }
@@ -365,5 +367,5 @@ def plot_adjacency_matrix(lattice, filename):
             ctx.stroke()
     print('finished creating a diagram')
     subprocess.check_call(['rsvg-convert', svg_fname, '-o', filename])
-    #os.remove(svg_fname)
+    os.remove(svg_fname)
     print('generated adjacency matrix', filename)
