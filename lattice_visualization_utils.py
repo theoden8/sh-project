@@ -89,7 +89,7 @@ def plot_node(lattice, nd, graph_images, ndcolorfunc, **kwargs):
     if not os.path.exists(imgname):
         G = load_graph(nd)
         g = lattice.path_finder.core_graph
-        eq_class_size = int((lattice.g.degree(nd) - g.degree(nd)) / 2) + 1
+        eq_class_size = int(g.degree(nd) / 2) + lattice.class_size(nd)
         plot_graph(G, imgname,
                    title=graph_label_rename(nd) + ' : ' + str(eq_class_size),
                    title_font_size=12,
@@ -136,11 +136,10 @@ def plot_graph_icons(lattice, graph_images, ndcolorfunc=node_color_func, **kwarg
     if not os.path.exists(graph_images):
         os.mkdir(graph_images)
     g = lattice.path_finder.core_graph
-    equivalence_class_size = lambda x : int((lattice.g.degree(x) - g.degree(x)) / 2) + 1
-    max_size = max([equivalence_class_size(nd) for nd in g.nodes()])
+    max_size = max([lattice.class_size(nd) for nd in g.nodes()])
     image_names = {}
     for nd in g.nodes():
-        eq_class_size = float(equivalence_class_size(nd))
+        eq_class_size = float(lattice.class_size(nd))
         importance = (eq_class_size / float(max_size)) ** .3
         imgname = plot_node(lattice, nd, graph_images, ndcolorfunc=ndcolorfunc, alpha=0.05 + (0.6 * importance))
         image_names[nd] = imgname
@@ -189,11 +188,10 @@ def export_as_d3(lattice, output_folder='visualizations'):
     image_names = plot_graph_icons(lattice, graph_images)
     with open(output_folder + '/lattice_graph_d3.json', 'w') as f:
         g_nodes = list(g.nodes())
-        equivalence_class_size = lambda x : int((lattice.g.degree(x) - g.degree(x)) / 2) + 1
         data = {
             'nodes': [
                 {
-                    'name': graph_label_rename(nd) + ' : ' + str(equivalence_class_size(nd)),
+                    'name': graph_label_rename(nd) + ' : ' + str(lattice.class_size(nd)),
                     'color': node_color_func(nd),
                     'img': image_names[nd][len(output_folder) + 1:]
                 }
@@ -218,7 +216,7 @@ def plot_lattice(lattice, filename, **kwargs):
                  family='monospace',
                  weight='bold')
 
-    g = lattice.g
+    g = lattice.path_finder.core_graph
     ax = plt.subplot(111)
     nodelist = list(g.nodes())
     nodelist_neighborhood = nodelist

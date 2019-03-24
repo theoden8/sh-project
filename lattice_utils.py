@@ -21,73 +21,74 @@ def get_graph_id(gfile):
     return int(fname.split('_')[2])
 
 
+def iterate_edges(dval):
+    for k in dval:
+        for v in dval[k]:
+            yield [k, v]
+
+
 class LatticePathFinder:
-    def __init__(self, lattice, nonedges, cores):
+    def __init__(self, lattice, g, nonedges, cores):
         self.lattice = lattice
-        if len(cores) == 0:
-            self.representatives = [nd for nd in self.lattice.g.nodes() if self.check_representativeness(nd)]
-        else:
-            self.representatives = cores
-        self.core_graph = None
-        self.core_graph_c = None
-        self.update_core_graph(nonedges)
+        self.representatives = cores
+        self.repr_set = set(self.representatives)
+        # set core graph and its complement
+        self.core_graph = g
+        self.core_graph_c = nx.DiGraph()
+        self.core_graph_c.add_nodes_from(self.representatives)
+        self.core_graph_c.add_edges_from(iterate_edges(nonedges))
+        # check everything is how it is expected
         for c in cores:
             self.update_representativeness(c)
 
-    def update_core_graph(self, nonedges):
-        subgraph = self.lattice.g.subgraph(self.representatives)
+    def add_representative(self, nd):
+        self.representatives += [nd]
+        self.repr_set.add(nd)
 
-        self.core_graph = nx.DiGraph(subgraph.edges())
-        self.core_graph.add_nodes_from(self.representatives)
+        self.core_graph.add_node(nd)
+        # for rpr in self.representatives:
+        #     if self.lattice.g.has_edge(rpr, nd):
+        #         self.core_graph.add_edge(rpr, nd)
+        #     if self.lattice.g.has_edge(nd, rpr):
+        #         self.core_graph.add_edge(nd, rpr)
+        self.core_graph_c.add_node(nd)
 
-        self.core_graph_c = nx.DiGraph()
-        self.core_graph_c.add_nodes_from(self.representatives)
-        for a in nonedges:
-            a = self.get_equivalent_node(a)
-            for b in nonedges[a]:
-                b = self.get_equivalent_node(b)
-                #if not self.is_known_non_homomorphism(a, b):
-                self.core_graph_c.add_edge(a, b)
+    def remove_representative(self, nd):
+        index = self.representatives.index(nd)
+        del self.representatives[index]
+        self.repr_set.remove(nd)
+        self.core_graph.remove_node(nd)
+        self.core_graph_c.remove_node(nd)
 
     def update_representativeness(self, nd):
         should_contain = self.check_representativeness(nd)
         if should_contain and not self.is_representative(nd):
-            self.representatives += [nd]
-
-            self.core_graph.add_node(nd)
-            for candidate in self.representatives:
-                if self.lattice.g.has_edge(candidate, nd):
-                    self.core_graph.add_edge(candidate, nd)
-                if self.lattice.g.has_edge(nd, candidate):
-                    self.core_graph.add_edge(nd, candidate)
-            self.core_graph_c.add_node(nd)
+            self.add_representative(nd)
         elif not should_contain and self.is_representative(nd):
-            index = self.representatives.index(nd)
-            del self.representatives[index]
-            self.core_graph.remove_node(nd)
-            self.core_graph_c.remove_node(nd)
+            self.remove_representative(nd)
 
     def get_equivalent_node(self, nd):
-        g = self.lattice.g
         if self.is_representative(nd):
             return nd
-        for nb in g.neighbors(nd):
-            if self.is_representative(nb):
-                return nb
+        # for nb in self.lattice.g.neighbors(nd):
+        #     if self.is_representative(nb):
+        #         return nb
+        for rpr in self.representatives:
+            if rpr in self.lattice.classes and nd in self.lattice.classes[rpr]:
+                return rpr
         return nd
 
     def is_representative(self, nd):
-        return nd in self.representatives
+        return nd in self.repr_set
 
     def check_representativeness(self, nd):
-        g = self.lattice.g
-        if g.in_degree(nd) == 0 or g.out_degree(nd) == 0:
+        if self.core_graph.in_degree(nd) == 0 or self.core_graph.out_degree(nd) == 0:
             return True
-        for nb in g.neighbors(nd):
-            if not g.has_edge(nb, nd):
+        for nb in self.core_graph.neighbors(nd):
+            if not self.core_graph.has_edge(nb, nd):
                 return True
-        for nb in g.predecessors(nd):
-            if not g.has_edge(nd, nb):
+        for nb in self.core_graph.predecessors(nd):
+            if not self.core_graph.has_edge(nd, nb):
                 return True
         if get_graph_size(nd) == 2:
             return True
@@ -124,17 +125,6 @@ class LatticePathFinder:
         else:
             self.core_graph_c.add_edge(a, b)
 
-    def normalize_memoization(self, a):
-        if self.is_representative(a):
-            return
-        #print('normalizing', a)
-        equiv = self.get_equivalent_node(a)
-        if a == equiv:
-            return
-        if a in self.core_graph.nodes():
-            self.core_graph.remove_node(a)
-            self.core_graph_c.remove_node(a)
-
     def has_path(self, a, b):
         # replace nodes with their equivalents
         if self.is_known_homomorphism(a, b):
@@ -148,17 +138,12 @@ class LatticePathFinder:
 
     def can_remove_edge(self, a, b):
         #print('trying to remove edge', a, b)
-        if self.lattice.g.out_degree(a) == 1 or self.lattice.g.in_degree(b) == 1:
+        if self.core_graph.out_degree(a) == 1 or self.core_graph.in_degree(b) == 1:
             return False
         self.core_graph.remove_edge(a, b)
         result = nx.has_path(self.core_graph, a, b)
         self.core_graph.add_edge(a, b)
         return result
-        #for path in nx.all_simple_paths(self.core_graph, a, b):
-            #if len(path) > 2:
-                ##print('succeeded removing edge')
-                #return True
-        #return False
 
 class LatticeGraphCache:
     def __init__(self, lattice):
@@ -179,9 +164,9 @@ class LatticeGraphCache:
         return load_graph(fname)
 
 class Lattice:
-    def __init__(self, g, nonedges={}, cores=[]):
-        self.g = g
-        self.path_finder = LatticePathFinder(self, nonedges, cores)
+    def __init__(self, g, nonedges={}, cores=[], classes={}):
+        self.path_finder = LatticePathFinder(self, g, nonedges, cores)
+        self.classes = classes
         self.cache = LatticeGraphCache(self)
 
     @staticmethod
@@ -193,42 +178,51 @@ class Lattice:
         with open(filename, 'w') as f:
             json.dump(serialize_lattice(self), f)
 
+    def has_node(self, nd):
+        for rpr in self.classes:
+            if rpr == nd or nd in self.classes[rpr]:
+                return True
+        return False
+
+    def class_size(self, nd):
+        if nd not in self.classes:
+            return 1
+        return len(self.classes[nd])
+
     def add_object(self, filename):
         nodename = filename
         #print()
         print('adding object', nodename)
-        nodes = list(self.g.nodes())
-        if nodename in nodes:
+        if self.has_node(nodename):
             print('already exists', nodename)
             return
-        self.g.add_node(nodename)
-        self.path_finder.update_representativeness(nodename)
+        self.path_finder.add_representative(nodename)
         self.cache.update()
-        sorted_representatives = sorted(self.path_finder.representatives, key=lambda nd: self.g.degree(nd), reverse=True)
+        sorted_representatives = sorted(self.path_finder.representatives, key=lambda nd: self.class_size(nd), reverse=True)
         for other_graph in sorted_representatives:
             if nodename == other_graph:
                 continue
             #print('\t<?>', other_graph)
             self.establish_homomorphism(nodename, other_graph)
-            if self.g.has_edge(nodename, other_graph) and self.g.has_edge(other_graph, nodename):
+            self.establish_homomorphism(other_graph, nodename)
+            if self.path_finder.core_graph.has_edge(nodename, other_graph) and self.path_finder.core_graph.has_edge(other_graph, nodename):
                 # we found an equivalence to an existing node
-                for nb in list(self.g.neighbors(nodename)):
+                for nb in list(self.path_finder.core_graph.neighbors(nodename)):
                     if nb == other_graph:
                         continue
-                    self.g.remove_edge(nodename, nb)
-                for nb in list(self.g.predecessors(nodename)):
+                    self.path_finder.core_graph.remove_edge(nodename, nb)
+                for nb in list(self.path_finder.core_graph.predecessors(nodename)):
                     if nb == other_graph:
                         continue
-                    self.g.remove_edge(nb, nodename)
-                self.path_finder.update_representativeness(nodename)
-                self.path_finder.normalize_memoization(nodename)
+                    self.path_finder.core_graph.remove_edge(nb, nodename)
+                self.path_finder.remove_representative(nodename)
                 break
 
     def is_homomorphic(self, gfile, hfile):
         print('eval %s -> %s' % (gfile, hfile))
         if gfile == hfile:
             return True
-        g_known, h_known = gfile in self.g.nodes(), hfile in self.g.nodes()
+        g_known, h_known = self.has_node(gfile), self.has_node(hfile)
         if g_known and h_known:
             if self.path_finder.is_known_relation(gfile, hfile):
                 return self.path_finder.is_known_homomorphism(gfile, hfile)
@@ -272,20 +266,6 @@ class Lattice:
         G, H = self.cache.load(gfile), self.cache.load(hfile)
         return is_homomorphic(G, H)
 
-    def add_edge(self, gfile, hfile):
-        #print('add edge', gfile, hfile)
-        self.g.add_edge(gfile, hfile)
-        if self.g.has_edge(hfile, gfile):
-            self.path_finder.update_representativeness(gfile)
-            self.path_finder.update_representativeness(hfile)
-
-    def remove_edge(self, gfile, hfile):
-        if self.path_finder.can_remove_edge(gfile, hfile):
-            self.g.remove_edge(gfile, hfile)
-            self.path_finder.update_representativeness(gfile)
-            self.path_finder.update_representativeness(hfile)
-            #print('\t%s /-> %s' % (gfile, out))
-
     def establish_homomorphism(self, gfile, hfile):
         if self.path_finder.is_known_relation(gfile, hfile):
             return self.path_finder.is_known_homomorphism(gfile, hfile)
@@ -298,22 +278,24 @@ class Lattice:
         phi = self.find_homomorphism(gfile, hfile)
         if phi is None:
             self.path_finder.memoize_relation(gfile, hfile, False)
+            # self.path_finder.update_representativeness(gfile)
+            # self.path_finder.update_representativeness(hfile)
             return False
-        reach_nodes = [nd for nd in nx.dfs_tree(self.path_finder.core_graph, hfile).nodes()
-                       if nd != hfile and self.path_finder.is_known_homomorphism(hfile, nd)]
-        self.add_edge(gfile, hfile)
+        # reach_nodes = [nd for nd in nx.dfs_tree(self.path_finder.core_graph, hfile).nodes()
+        #                if nd != hfile and self.path_finder.is_known_homomorphism(hfile, nd)]
         #print('%s -> %s' % (gfile, hfile))
-        for out in reach_nodes:
-            if self.g.has_edge(gfile, out):
-                self.remove_edge(gfile, out)
+        # for out in reach_nodes:
+        #     if self.path_finder.core_graph.has_edge(gfile, out) and self.path_finder.can_remove_edge(gfile, out):
+        #         self.path_finder.core_graph.remove_edge(gfile, out)
+                # self.path_finder.update_representativeness(gfile)
+                # self.path_finder.update_representativeness(hfile)
         self.path_finder.memoize_relation(gfile, hfile, True)
+        # self.path_finder.update_representativeness(gfile)
+        # self.path_finder.update_representativeness(hfile)
         return True
 
     def transitive_reduction(self):
         self.path_finder.core_graph = nx.transitive_reduction(self.path_finder.core_graph)
-        for (u, v) in list(self.g.subgraph(self.path_finder.core_graph.nodes()).edges()):
-            if not self.path_finder.core_graph.has_edge(u, v):
-                self.g.remove_edge(u, v)
 
 
 def serialize_lattice(lattice):
@@ -323,23 +305,14 @@ def serialize_lattice(lattice):
             for u in lattice.path_finder.core_graph_c.nodes()
     }
     j['cores'] = lattice.path_finder.representatives
-    j['classes'] = {
-        rpr : [rpr] + [nd for nd in lattice.g.neighbors(rpr) if lattice.path_finder.get_equivalent_node(nd) == rpr]
-            for rpr in lattice.path_finder.representatives
-    }
+    j['classes'] = lattice.classes
     return j
 
 
 def deserialize_lattice(s):
     j = json.loads(s)
     g = deserialize_digraph(json.dumps({'nodes':j['nodes'],'edges':j['edges']}))
-    classes = j['classes'] if 'classes' in j else {}
-    for representative in classes:
-        for nd in classes[representative]:
-            if nd == representative:
-                continue
-            g.add_edge(representative, nd)
-            g.add_edge(nd, representative)
     nonedges = j['nonedges']
     cores = j['cores'] if 'cores' in j else []
-    return Lattice(g, nonedges, cores)
+    classes = j['classes'] if 'classes' in j else {}
+    return Lattice(g, nonedges, cores, classes)

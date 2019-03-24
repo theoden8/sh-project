@@ -50,15 +50,8 @@ This repository contains files related to the SH project called "Graph Homomorph
 
 * lattice_visualization_utils.py: utilities for visualizing lattice graph
 
-* make_lattice_animation.py: construct frames for an animation
-
-* make_lattice_frame.py: construct individual image frame from a snapshot
-
-* make_frames: construct image frames from snapshots in parallel
-
-* make_movie: make a movie out of frames
-
 * quick_notes.pdf: updated version of notes from papers
+
 
 ## solver
 
@@ -126,17 +119,6 @@ time ./solve_homomorphism.py <gfile> <hfile>
 # verify the most important relations
 ./test_important_lattice_relations
 # open visualization/index.html or visualization/index_d3.html for interactive graph
-```
-
-##### animation
-
-```bash
-# generate lattice snapshots for each frame
-./make_lattice_animation.py
-# generate frames for the animation. should use multiple machines simultaneously, in the same FS:
-./make_frames
-cd frames
-./make_movie
 ```
 
 # resources

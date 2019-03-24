@@ -21,10 +21,10 @@ if __name__ == '__main__':
         graph_file = graph_file.replace('./', '')
         lattice.add_object(graph_file)
 
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 2:
         lattice.unload(dbfile)
     lattice.transitive_reduction()
-    if len(lattice.g.nodes()) > 0:
+    if len(lattice.path_finder.representatives) > 0:
         export_as_vivagraph(lattice, 'visualizations')
         export_as_d3(lattice, 'visualizations')
         plot_lattice(lattice, 'lattice.png')
