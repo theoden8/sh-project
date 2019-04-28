@@ -30,22 +30,21 @@ gfile=$1;shift
 create_adjacency_list() {
     file=$1; shift
     echo "
+from graph_utils import *
 import json
 if __name__ == '__main__':
-    with open('$file', 'r') as f:
-        j = json.load(f)
-        nodes = j['nodes']
-        nodes = range(len(nodes))
-        edges = j['edges']
-        adj = []
-        for u in nodes:
-            row = []
-            for v in nodes:
-                e1, e2 = [u, v], [v, u]
-                if e1 in edges or e2 in edges:
-                    row += [v + 1]
-            adj += [row]
-        print(adj)
+    g = load_graph('$file')
+    nodes = list(g.nodes())
+    edges = list(g.edges())
+    adj = []
+    for u in nodes:
+        row = []
+        for v in nodes:
+            e1, e2 = [u, v], [v, u]
+            if e1 in edges or e2 in edges:
+                row += [v + 1]
+        adj += [row]
+    print(adj)
     "
 }
 

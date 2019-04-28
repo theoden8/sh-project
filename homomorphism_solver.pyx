@@ -189,8 +189,9 @@ cdef class Solver:
             if visited.count(ind):
                 continue
             new_rating = 0
-            new_rating += 100 * self.count_g_neighbors_in_set(ind, g_nodes_visited)
-            new_rating += 50 * self.count_h_neighbors_in_set(ind, g_nodes_visited)
+            no_nbs = self.count_g_neighbors_in_set(ind, g_nodes_visited)
+            new_rating += 100 * no_nbs
+            new_rating += 50 * (self.i - no_nbs)
             if new_rating > rating:
                 option, rating = ind, new_rating
             elif new_rating == rating and self.error_g[ind] > self.error_g[option]:

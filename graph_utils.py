@@ -76,6 +76,7 @@ def plot_graphs(Gs, ssizes, filename, **kwargs):
     fig.savefig(filename)
     plt.clf()
     plt.cla()
+    plt.close(fig)
 
 
 def plot_graph(G, filename, **kwargs):
@@ -144,7 +145,7 @@ def plot_homomorphism(G, H, phi, filename):
     plot_graphs(Gs=[(G, '$ Dom(\phi) $' + str(phi)), (H, '$ Im(\phi) $')],
                 ssizes=(1, 2),
                 filename=filename,
-                colors=['r', 'b'],
+                colors=['#FF7F7F', '#A3AAFF'],
                 title_font_size=20,
                 label_font_size=20)
 
@@ -165,11 +166,18 @@ def deserialize_graph(s):
 
 
 def load_graph(fname):
+    if fname.endswith('.g6'):
+        return nx.read_graph6(fname)
+    elif not os.path.exists(fname) and fname.endswith('.json'):
+        return load_graph(fname.replace('.json', '.g6'))
     with open(fname, 'r') as f:
         return deserialize_graph(f.read())
 
 
 def unload_graph(g, fname):
+    if fname.endswith('.g6'):
+        nx.write_graph6(g, fname, header=False)
+        return
     s = serialize_graph(g)
     with open(fname, 'w') as f:
         json.dump(s, f)
@@ -208,6 +216,11 @@ def is_path(g):
 
 
 def is_cycle(g):
+    if len(g.nodes()) == 2:
+        for nd in g.nodes():
+            if g.degree(nd) != 1:
+                return False
+        return True
     for nd in g.nodes():
         if g.degree(nd) != 2:
             return False

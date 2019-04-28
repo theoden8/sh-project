@@ -82,14 +82,14 @@ def filter_nodes_neighborhood(g, nodelist, label):
 
 
 def plot_node(lattice, nd, graph_images, ndcolorfunc, **kwargs):
-    imgname = graph_images + '/' + os.path.basename(nd).replace('.json', '.png')
+    imgname = graph_images + '/' + os.path.basename(nd).replace('.json', '.png').replace('.g6', '.png')
     if os.path.exists(imgname):
         return imgname
     alpha = kwargs['alpha'] if 'alpha' in kwargs else .2
     if not os.path.exists(imgname):
         G = load_graph(nd)
         g = lattice.path_finder.core_graph
-        eq_class_size = int(g.degree(nd) / 2) + lattice.class_size(nd)
+        eq_class_size = lattice.class_size(nd)
         plot_graph(G, imgname,
                    title=graph_label_rename(nd) + ' : ' + str(eq_class_size),
                    title_font_size=12,
@@ -180,38 +180,12 @@ def export_as_vivagraph(lattice, output_folder='visualizations'):
     print('exported graph as vivagraph to', output_folder)
 
 
-def export_as_d3(lattice, output_folder='visualizations'):
-    if not os.path.exists(output_folder):
-        os.mkdir(output_folder)
-    graph_images = output_folder + '/graph_images'
-    g = lattice.path_finder.core_graph
-    image_names = plot_graph_icons(lattice, graph_images)
-    with open(output_folder + '/lattice_graph_d3.json', 'w') as f:
-        g_nodes = list(g.nodes())
-        data = {
-            'nodes': [
-                {
-                    'name': graph_label_rename(nd) + ' : ' + str(lattice.class_size(nd)),
-                    'color': node_color_func(nd),
-                    'img': image_names[nd][len(output_folder) + 1:]
-                }
-                for nd in g_nodes
-            ],
-            'links': [
-                {
-                    'source': g_nodes.index(u),
-                    'target': g_nodes.index(v)
-                }
-                for (u, v) in g.edges()
-            ]
-        }
-        json.dump(data, f)
-    print('exported graph as d3 to', output_folder)
-
-
 def plot_lattice(lattice, filename, **kwargs):
-    plt.figure(figsize=(16, 16))
-    plt.suptitle('lattice',
+    fig = plt.figure(figsize=(16, 16))
+    facecolor = 'w'
+    fig.patch.set_facecolor(facecolor)
+    mpl.rcParams['savefig.facecolor'] = facecolor
+    plt.suptitle('Hasse Diagram',
                  size=35,
                  family='monospace',
                  weight='bold')
@@ -283,87 +257,3 @@ def plot_lattice(lattice, filename, **kwargs):
     plt.cla()
     plt.close()
     print('generated plot image', filename)
-
-
-def graph_color(fname):
-    red = (1, 0, 0)
-    green = (0, 1, 0)
-    blue = (0, 0, 1)
-    yellow = (1, 1, 0)
-    purple = (1, 0, 1)
-    cyan = (0, .7, .7)
-    black = (0, 0, 0)
-    gray = (.5, .5, .5)
-    white = (1, 1, 1)
-    g = load_graph(fname)
-    if is_path(g):
-        return gray
-    elif is_cycle(g):
-        return yellow
-    elif is_complete(g):
-        return green
-    elif len(g.nodes()) <= 5:
-        return cyan
-    return black
-
-
-def plot_adjacency_matrix(lattice, filename):
-    g = lattice.path_finder.core_graph
-    red = (1, 0, 0)
-    green = (0, 1, 0)
-    blue = (0, 0, 1)
-    yellow = (1, 1, 0)
-    purple = (1, 0, 1)
-    cyan = (0, .7, .7)
-    black = (0, 0, 0)
-    gray = (.5, .5, .5)
-    white = (1, 1, 1)
-
-    colors = [
-        # (1, 0, 0),
-        # (0, 1, 0),
-        # (0, 0, 1),
-        # (0, 0, 0),
-        # (1, 0, 1),
-        # (0, 1, 1)
-        black
-    ]
-    get_color = lambda n: colors[n % len(colors)]
-    size = len(g.nodes())
-    svg_fname = filename.replace('.png', '.svg')
-    with cairo.SVGSurface(svg_fname, size, size) as surface:
-        ctx = cairo.Context(surface)
-
-        ctx.rectangle(0, 0, float(size), float(size))
-        ctx.set_source_rgba(1., 1., 1., 1.)
-        ctx.fill()
-
-        g_nodes = list(g.nodes())
-        n = len(g_nodes)
-        rectsize = float(size) / n
-        color_priority = [gray, yellow, green, cyan, black]
-        def sort_func(gfile):
-            g = lattice.cache.load(gfile)
-            n = get_graph_size(gfile)
-            e = len(g.edges())
-            return n * 10000 + e
-        g_nodes.sort(key=sort_func)
-        for i in range(n):
-            print('row', i)
-            row_color = graph_color(g_nodes[i])
-            for j in range(n):
-                col_color = graph_color(g_nodes[j])
-                cell_color = row_color
-                if col_color in color_priority and color_priority.index(col_color) < color_priority.index(cell_color):
-                    cell_color = col_color
-
-                if lattice.path_finder.is_known_homomorphism(g_nodes[i], g_nodes[j]):
-                    cr, cg, cb = cell_color
-                    ctx.rectangle(i * rectsize, j * rectsize, rectsize, rectsize)
-                    ctx.set_source_rgba(cr, cg, cb, 1.)
-                    ctx.fill()
-            ctx.stroke()
-    print('finished creating a diagram')
-    subprocess.check_call(['rsvg-convert', svg_fname, '-o', filename])
-    os.remove(svg_fname)
-    print('generated adjacency matrix', filename)

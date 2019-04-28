@@ -8,7 +8,7 @@ if __name__ == '__main__':
     fname = 'lattice.json'
     cores = None
     with open('lattice.json', 'r') as f:
-        cores = json.load(f)['cores']
+        cores = json.load(f)['nodes']
     for core in cores:
         print(core)
 " | {

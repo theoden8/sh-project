@@ -17,7 +17,7 @@ def get_graph_size(gfile):
 
 
 def get_graph_id(gfile):
-    fname = os.path.basename(gfile).replace('.json', '')
+    fname = os.path.basename(gfile).replace('.json', '').replace('.g6', '')
     return int(fname.split('_')[2])
 
 
@@ -164,9 +164,12 @@ class LatticeGraphCache:
         return load_graph(fname)
 
 class Lattice:
-    def __init__(self, g, nonedges={}, cores=[], classes={}):
+    def __init__(self, g=None, nonedges={}, cores=[], classes={}):
+        g = nx.DiGraph() if g is None else g
         self.path_finder = LatticePathFinder(self, g, nonedges, cores)
         self.classes = classes
+        for k in classes:
+            self.classes[k] = set(classes[k])
         self.cache = LatticeGraphCache(self)
 
     @staticmethod
@@ -188,6 +191,11 @@ class Lattice:
         if nd not in self.classes:
             return 1
         return len(self.classes[nd])
+
+    def add_element_to_class(self, rpr, nd):
+        if rpr not in self.classes:
+            self.classes[rpr] = set()
+        self.classes[rpr].add(nd)
 
     def add_object(self, filename):
         nodename = filename
@@ -216,6 +224,7 @@ class Lattice:
                         continue
                     self.path_finder.core_graph.remove_edge(nb, nodename)
                 self.path_finder.remove_representative(nodename)
+                self.add_element_to_class(other_graph, nodename)
                 break
 
     def is_homomorphic(self, gfile, hfile):
@@ -229,7 +238,7 @@ class Lattice:
         elif g_known and not h_known:
             nonedges = []
             equiv = self.path_finder.get_equivalent_node(gfile)
-            print('found equivalent', equiv)
+            # print('found equivalent', equiv)
             if equiv in self.path_finder.core_graph_c.nodes():
                 nonedges = list(self.path_finder.core_graph_c.neighbors(equiv))
             nonedges = [nd for nd in nonedges if get_graph_size(nd) <= get_graph_size(gfile)]
@@ -283,7 +292,7 @@ class Lattice:
             return False
         # reach_nodes = [nd for nd in nx.dfs_tree(self.path_finder.core_graph, hfile).nodes()
         #                if nd != hfile and self.path_finder.is_known_homomorphism(hfile, nd)]
-        #print('%s -> %s' % (gfile, hfile))
+        # print('%s -> %s' % (gfile, hfile))
         # for out in reach_nodes:
         #     if self.path_finder.core_graph.has_edge(gfile, out) and self.path_finder.can_remove_edge(gfile, out):
         #         self.path_finder.core_graph.remove_edge(gfile, out)
@@ -306,6 +315,8 @@ def serialize_lattice(lattice):
     }
     j['cores'] = lattice.path_finder.representatives
     j['classes'] = lattice.classes
+    for k in lattice.classes:
+        j['classes'][k] = list(lattice.classes[k])
     return j
 
 
