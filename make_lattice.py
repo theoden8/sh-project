@@ -13,7 +13,7 @@ from lattice_visualization_utils import *
 if __name__ == '__main__':
     plt.switch_backend('agg')
     dbfile = './lattice.json'
-    lattice = Lattice(nx.DiGraph())
+    lattice = Lattice()
     if os.path.exists(dbfile):
         lattice = Lattice.load(dbfile)
 
@@ -26,6 +26,4 @@ if __name__ == '__main__':
     lattice.transitive_reduction()
     if len(lattice.path_finder.representatives) > 0:
         export_as_vivagraph(lattice, 'visualizations')
-        export_as_d3(lattice, 'visualizations')
-        plot_lattice(lattice, 'lattice.png')
-        plot_adjacency_matrix(lattice, 'lattice_adj.png')
+        plot_lattice(lattice, 'hasse_diagram.png')

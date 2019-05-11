@@ -1,7 +1,7 @@
 #!/bin/bash
 
 for gfile in $(find graphs -name "*.json" | sort -R); do
-    for hfile in $(find small_graphs -name "*.json" | sort -R); do
+    for hfile in $(find small_graphs -name "*.g6" | sort -R); do
         gap_res=$(./gap_is_homomorphic_gh "$gfile" "$hfile")
         sh_res=$(./solve_homomorphism.py "$gfile" "$hfile" | tail -1)
         [ "$sh_res" = fail ] && sh_res=NO || sh_res=YES
