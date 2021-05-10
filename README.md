@@ -1,3 +1,5 @@
+# [link to the dissertation](./sh_dissertation.pdf)
+
 # about
 
 This repository contains files related to the SH project called "Graph Homomorphisms".
@@ -47,7 +49,6 @@ This repository contains files related to the SH project called "Graph Homomorph
 * lattice_utils.py: utilities for lattice operations
 
 * lattice_visualization_utils.py: utilities for visualizing lattice graph
-
 
 # prerequisites
 
@@ -110,10 +111,8 @@ time ./solve_homomorphism_with_lattice.py <gfile> <hfile>
 # open visualization/index.html or visualization/index_d3.html for interactive graph
 ```
 
-
-
 [1]: https://neerc.ifmo.ru/wiki/index.php?title=%D0%A2%D0%B5%D0%BE%D1%80%D0%B8%D1%8F_%D0%B3%D1%80%D0%B0%D1%84%D0%BE%D0%B2
 [2]: http://www.lsi.upc.es/~valiente/abs-wsp-1997.pdf
 [3]: http://www.math.tu-dresden.de/~bodirsky/Graph-Homomorphisms.pdf
 [4]: https://link.springer.com/article/10.1023/A:1008647514949
-[5]: http://users.cecs.anu.edu.au/~bdm/data/graphs.htm	"Brendan McKay's combinatorial data: graphs"
+[5]: http://users.cecs.anu.edu.au/~bdm/data/graphs.htm "Brendan McKay's combinatorial data: graphs"
